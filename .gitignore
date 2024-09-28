@@ -1,0 +1,7 @@
+# build artefacts
+x64/
+src/Version.h
+
+# visual studio
+.vs/
+.vscode/

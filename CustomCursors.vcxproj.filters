@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{8d377602-6759-4e70-8b3f-be6a99b5a25d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries">
+      <UniqueIdentifier>{baa5de67-65a6-4870-bc53-f75549fe27b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\stb">
+      <UniqueIdentifier>{7ecbd843-44c2-4fdb-9772-18dd2aff74b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\imgui">
+      <UniqueIdentifier>{41462fcf-91d0-41ba-aea7-1de3ed442212}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\json">
+      <UniqueIdentifier>{75a8b66d-0d4c-4c4b-8a8a-6ae609d56227}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\process_scanner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\process_scanner_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mumble\Mumble.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\nexus\Nexus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imconfig.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imgui.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imgui_internal.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imstb_rectpack.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imstb_textedit.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui\imstb_truetype.h">
+      <Filter>Libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\create_cursor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\nlohmann\json.hpp">
+      <Filter>Libraries\json</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stb\stb_image.h">
+      <Filter>Libraries\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stb\stb_image_resize2.h">
+      <Filter>Libraries\stb</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\entry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\process_scanner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui.cpp">
+      <Filter>Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_demo.cpp">
+      <Filter>Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_draw.cpp">
+      <Filter>Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_tables.cpp">
+      <Filter>Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_widgets.cpp">
+      <Filter>Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\create_cursor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="scripts\version.bat">
+      <Filter>Scripts</Filter>
+    </None>
+  </ItemGroup>
+</Project>
