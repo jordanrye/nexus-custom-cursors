@@ -1,5 +1,5 @@
 # build artefacts
-x64/
+build/
 src/Version.h
 
 # visual studio

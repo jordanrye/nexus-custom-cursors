@@ -26,12 +26,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\process_scanner.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\process_scanner_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\mumble\Mumble.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -89,12 +83,15 @@
     <ClInclude Include="src\hash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\basic_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cursor_load.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\entry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\process_scanner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\shared.cpp">
@@ -125,6 +122,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\hash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cursor_load.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
