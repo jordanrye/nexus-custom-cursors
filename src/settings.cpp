@@ -1,26 +1,17 @@
 #include <filesystem>
 #include <fstream>
 
-#include "create_cursor.h"
+#include "cursor_load.h"
 
 #include "settings.h"
 
 namespace Settings
 {
-	static void SetCustomCursor();
-	static bool IsFileType(const std::string& str, const std::string& ext);
-
 	std::mutex Mutex;
 	std::filesystem::path SettingsPath;
 	json Settings = json::object();
 
-	/* Cursor configuration */
-	std::string CursorFilePath = "(null)";
-	E_FILE_FORMAT CursorFileFormat = E_FILE_FORMAT_INVALID;
-	INT CursorWidth = 0;
-	INT CursorHeight = 0;
-	INT CursorHotspotX = 0;
-	INT CursorHotspotY = 0;
+	static void LoadCustomCursors();
 
 	void Load(const std::filesystem::path& aPath)
 	{
@@ -44,27 +35,43 @@ namespace Settings
 
 		if (!Settings.is_null())
 		{
-			if (!Settings["CURSOR_FILE_PATH"].is_null()) { Settings["CURSOR_FILE_PATH"].get_to(CursorFilePath); }
-			if (!Settings["CURSOR_FILE_FORMAT"].is_null()) { Settings["CURSOR_FILE_FORMAT"].get_to(CursorFileFormat); }
-			if (!Settings["CURSOR_WIDTH"].is_null()) { Settings["CURSOR_WIDTH"].get_to(CursorWidth); }
-			if (!Settings["CURSOR_HEIGHT"].is_null()) { Settings["CURSOR_HEIGHT"].get_to(CursorHeight); }
-			if (!Settings["CURSOR_HOTSPOT_X"].is_null()) { Settings["CURSOR_HOTSPOT_X"].get_to(CursorHotspotX); }
-			if (!Settings["CURSOR_HOTSPOT_Y"].is_null()) { Settings["CURSOR_HOTSPOT_Y"].get_to(CursorHotspotY); }
+			if (!Settings["cursors"].is_null())
+			{
+				for (auto &cursor : Settings["cursors"])
+				{
+					Hash key = 0;
+					cursor["cursor_id"].get_to(key);
+					cursor["file_path"].get_to(cursors[key].customFilePath);
+					cursor["file_format"].get_to(cursors[key].customFileFormat);
+					cursor["width"].get_to(cursors[key].customWidth);
+					cursor["height"].get_to(cursors[key].customHeight);
+					cursor["hotspot_x"].get_to(cursors[key].customHotspotX);
+					cursor["hotspot_y"].get_to(cursors[key].customHotspotY);
+				}
+			}
 		}
 
-		SetCustomCursor();
+		/* load cursors into CursorMap */
+		LoadCustomCursors();
 	}
 
 	void Save()
 	{
-		SetCustomCursor();
+		Settings["cursors"] = json::array();
 
-		Settings["CURSOR_FILE_PATH"] = CursorFilePath;
-		Settings["CURSOR_FILE_FORMAT"] = CursorFileFormat;
-		Settings["CURSOR_WIDTH"] = CursorWidth;
-		Settings["CURSOR_HEIGHT"] = CursorHeight;
-		Settings["CURSOR_HOTSPOT_X"] = CursorHotspotX;
-		Settings["CURSOR_HOTSPOT_Y"] = CursorHotspotY;
+		for(auto& cursor : cursors)
+		{
+			json obj{};
+			obj["cursor_id"] = cursor.first;
+			obj["file_path"] = cursor.second.customFilePath;
+			obj["file_format"] = cursor.second.customFileFormat;
+			obj["width"] = cursor.second.customWidth;
+			obj["height"] = cursor.second.customHeight;
+			obj["hotspot_x"] = cursor.second.customHotspotX;
+			obj["hotspot_y"] = cursor.second.customHotspotY;
+
+			Settings["cursors"].push_back(obj);
+		}
 
 		Mutex.lock();
 		{
@@ -75,28 +82,12 @@ namespace Settings
 		Mutex.unlock();
 	}
 
-	static void SetCustomCursor()
+	static void LoadCustomCursors()
 	{
-		std::string filename = Gw2RootDir.string() + CursorFilePath;
-
-		if (IsFileType(filename, ".png"))
+		for (auto& cursor : cursors)
 		{
-			hCustomCursor = CreateCursorFromPNG(filename, CursorWidth, CursorHeight, CursorHotspotX, CursorHotspotY);
+			LoadCustomCursor(cursor);
 		}
-		else if (IsFileType(filename, ".cur") || IsFileType(filename, ".ani"))
-		{
-			HANDLE hImage = LoadImage(NULL, filename.c_str(), IMAGE_CURSOR, CursorWidth, CursorHeight, LR_LOADFROMFILE);
-			hCustomCursor = static_cast<HCURSOR>(hImage);
-		}
-		else
-		{
-			hCustomCursor = NULL;
-		}
-	}
-
-	static bool IsFileType(const std::string& str, const std::string& ext)
-	{
-		return str.compare(str.size() - ext.size(), ext.size(), ext) == 0;
 	}
 
 } // namespace Settings

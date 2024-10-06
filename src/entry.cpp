@@ -1,10 +1,15 @@
 #include <Windows.h>
 #include <filesystem>
+#include <sstream>
+#include <string>
+#include <map>
 
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
 #include "imgui/imgui.h"
 
+#include "cursor_hash.h"
+#include "cursor_load.h"
 #include "settings.h"
 #include "shared.h"
 #include "version.h"
@@ -25,6 +30,28 @@ LPVOID pSetCursor = nullptr; /* address of SetCursor */
 typedef HCURSOR(WINAPI *SETCURSOR)(HCURSOR); /* define calling convention */
 SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
+	Hash key = GetCursorHash(hCursor);
+
+	APIDefs->Log(ELogLevel_INFO, "CustomCursors", std::to_string(key).c_str());
+
+	if (key != 0U)
+	{
+		auto it = cursors.find(key);
+
+		if (it != cursors.end())
+		{
+			/* update cursor */
+			hCustomCursor = it->second.customCursor;
+		}
+		else
+		{
+			/* key does not exist */
+			CursorProperties properties{};
+			properties.defaultCursor = hCursor;
+			cursors[key] = properties;
+		}
+	}
+
 	if (hCustomCursor != NULL)
 	{
 		return fpSetCursor(hCustomCursor);
@@ -39,9 +66,9 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
  * HOOK :: SetClassLongPtrA
  ******************************************************************************/
 LPVOID pSetClassLongPtrA = nullptr; /* address of SetClassLongPtrA */
-typedef HCURSOR(WINAPI *SETCLASSLONGPTRA)(HWND, int, LONG_PTR); /* define calling convention */
+typedef HCURSOR(WINAPI *SETCLASSLONGPTRA)(HWND, INT, LONG_PTR); /* define calling convention */
 SETCLASSLONGPTRA fpSetClassLongPtrA = NULL; /* pointer to call original SetClassLongPtrA */
-HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, int nIndex, LONG_PTR dwNewLong) {
+HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, INT nIndex, LONG_PTR dwNewLong) {
 	if (GCLP_HCURSOR == nIndex)
 	{
 		return fpSetClassLongPtrA(hWnd, nIndex, (LONG_PTR)hCustomCursor);
@@ -53,9 +80,9 @@ HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, int nIndex, LONG_PTR dwNewLong)
  * HOOK :: SetClassLongPtrW
  ******************************************************************************/
 LPVOID pSetClassLongPtrW = nullptr; /* address of SetClassLongPtrW */
-typedef HCURSOR(WINAPI* SETCLASSLONGPTRW)(HWND, int, LONG_PTR); /* define calling convention */
+typedef HCURSOR(WINAPI* SETCLASSLONGPTRW)(HWND, INT, LONG_PTR); /* define calling convention */
 SETCLASSLONGPTRW fpSetClassLongPtrW = NULL; /* pointer to call original SetClassLongPtrW */
-HCURSOR WINAPI DetourSetClassLongPtrW(HWND hWnd, int nIndex, LONG_PTR dwNewLong) {
+HCURSOR WINAPI DetourSetClassLongPtrW(HWND hWnd, INT nIndex, LONG_PTR dwNewLong) {
 	if (GCLP_HCURSOR == nIndex)
 	{
 		return fpSetClassLongPtrW(hWnd, nIndex, (LONG_PTR)hCustomCursor);
@@ -213,78 +240,140 @@ void AddonRender()
 
 void AddonOptions()
 {
-	ImGui::BeginTable("Movement", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
-	ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-	ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
-
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::PaddedText("Cursor File", 0.0F, 4.0F);
-	ImGui::TableNextColumn();
-	if (ImGui::Button((Settings::CursorFilePath + "##Cursor").c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
+	/* start outer table */
+	ImGui::BeginTable("Cursors", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
 	{
-		std::thread([]{
-			OPENFILENAME ofn = { 0 };
-			TCHAR szFile[MAX_PATH] = { 0 };
-			TCHAR initialDir[MAX_PATH] = { 0 };
+		ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
 
-			strcpy_s(initialDir, IconsDir.string().c_str());
+		for (auto& cursor : cursors)
+		{
+			ImGui::TableNextRow();
+		
+			/* preview */
+			ImGui::TableNextColumn();
+			ImGui::TextDisabled("<Icon>");
 
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = static_cast<HWND>(nullptr);
-			ofn.lpstrFile = szFile;
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
-			ofn.nFilterIndex = 2;
-			ofn.lpstrInitialDir = initialDir;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-			if (GetOpenFileName(&ofn) == TRUE)
+			/* start inner table */
+			ImGui::TableNextColumn();
+			ImGui::BeginTable(("Cursor##" + std::to_string(cursor.first)).c_str(), 2, ImGuiTableFlags_NoBordersInBody);
 			{
-				Settings::CursorFilePath = std::string(ofn.lpstrFile).substr(Gw2RootDir.string().length());
-				Settings::Save();
+				ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
+				ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::PaddedText("UID", 0.0F, 4.0F);
+				ImGui::TableNextColumn();
+				ImGui::PaddedText(std::to_string(cursor.first).c_str(), 0.0F, 4.0F);
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::PaddedText("Filepath", 0.0F, 4.0F);
+				ImGui::TableNextColumn();
+				if (ImGui::Button((cursor.second.customFilePath + "##Cursor").c_str(), ImVec2(ImGui::CalcItemWidth()-22, 0)))
+				{
+					std::thread([&cursor]{
+						OPENFILENAME ofn = { 0 };
+						TCHAR szFile[MAX_PATH] = { 0 };
+						TCHAR initialDir[MAX_PATH] = { 0 };
+
+						strcpy_s(initialDir, IconsDir.string().c_str());
+
+						ofn.lStructSize = sizeof(ofn);
+						ofn.hwndOwner = static_cast<HWND>(nullptr);
+						ofn.lpstrFile = szFile;
+						ofn.nMaxFile = sizeof(szFile);
+						ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
+						ofn.nFilterIndex = 2;
+						ofn.lpstrInitialDir = initialDir;
+						ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+						if (GetOpenFileName(&ofn) == TRUE)
+						{
+							cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(Gw2RootDir.string().length());
+							LoadCustomCursor(cursor);
+							Settings::Save();
+						}
+					}).detach();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("x##CursorRemove", ImVec2(18, 18)))
+				{
+					cursor.second = CursorProperties();
+					Settings::Save();
+				}
+
+				if (cursor.second.customFilePath != "")
+				{
+					ImGui::TableNextRow();
+					ImGui::TableNextColumn();
+					ImGui::PaddedText("Width", 0.0F, 4.0F);
+					ImGui::TableNextColumn();
+					if (ImGui::InputInt("##CursorWidth", &(cursor.second.customWidth), 8U, 8U))
+					{
+						LoadCustomCursor(cursor);
+						Settings::Save();
+					}
+
+					ImGui::TableNextRow();
+					ImGui::TableNextColumn();
+					ImGui::PaddedText("Height", 0.0F, 4.0F);
+					ImGui::TableNextColumn();
+					if (ImGui::InputInt("##CursorHeight", &(cursor.second.customHeight), 8U, 8U))
+					{
+						LoadCustomCursor(cursor);
+						Settings::Save();
+					}
+
+					if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::PaddedText("Hotspot X", 0.0F, 4.0F);
+						ImGui::TableNextColumn();
+						if (ImGui::InputInt("##CursorHotspotX", &(cursor.second.customHotspotX), 4U, 4U))
+						{
+							LoadCustomCursor(cursor);
+							Settings::Save();
+						}
+
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::PaddedText("Hotspot Y", 0.0F, 4.0F);
+						ImGui::TableNextColumn();
+						if (ImGui::InputInt("##CursorHotspotY", &(cursor.second.customHotspotY), 4U, 4U))
+						{
+							LoadCustomCursor(cursor);
+							Settings::Save();
+						}
+					}
+				}
+
+				/* end inner table */
+				ImGui::EndTable();
 			}
-		}).detach();
-	}
+		}
 
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::PaddedText("Cursor Width", 0.0F, 4.0F);
-	ImGui::TableNextColumn();
-	if (ImGui::InputInt("##CursorWidth", &Settings::CursorWidth, 8U, 8U))
-	{
-		Settings::Save();
+		/* end outer table */
+		ImGui::EndTable();
 	}
-
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::PaddedText("Cursor Height", 0.0F, 4.0F);
-	ImGui::TableNextColumn();
-	if (ImGui::InputInt("##CursorHeight", &Settings::CursorHeight, 8U, 8U))
-	{
-		Settings::Save();
-	}
-
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::PaddedText("Cursor Hotspot X", 0.0F, 4.0F);
-	ImGui::TableNextColumn();
-	if (ImGui::InputInt("##CursorHotspotX", &Settings::CursorHotspotX, 4U, 4U))
-	{
-		Settings::Save();
-	}
-
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::PaddedText("Cursor Hotspot Y", 0.0F, 4.0F);
-	ImGui::TableNextColumn();
-	if (ImGui::InputInt("##CursorHotspotY", &Settings::CursorHotspotY, 4U, 4U))
-	{
-		Settings::Save();
-	}
-
-	ImGui::EndTable();
 }
+
+// if (cursor.second.defaultCursor != nullptr)
+// {
+// 	ImGui::TableNextRow();
+// 	ImGui::TableNextColumn();
+// 	ImGui::PaddedText("Icon", 0.0F, 4.0F);
+// 	ImGui::TableNextColumn();
+// 	HDC hDC = GetDC(nullptr);
+// 	ImVec2 startPosition = ImGui::GetCursorPos();
+// 	ImGui::InvisibleButton("##PaddedText", ImVec2(32, 32));
+// 	ImVec2 endPosition = ImGui::GetCursorPos();
+// 	ImGui::SetCursorPos(startPosition);
+// 	DrawIcon(hDC, startPosition.x, startPosition.y, cursor.second.defaultCursor);
+// 	ImGui::SetCursorPos(endPosition);
+// }
 
 static void GetProcessPointers()
 {

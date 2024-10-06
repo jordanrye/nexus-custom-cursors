@@ -66,7 +66,7 @@ namespace ImGui
 		ImVec2 cursorFinal = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(cursorStart + ImVec2(paddingX, paddingY));
 		ImGui::Text(str);
-		ImGui::SetCursorPos(cursorFinal);
+		//ImGui::SetCursorPos(cursorFinal);
 	}
 
 } // namespace ImGui

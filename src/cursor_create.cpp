@@ -5,7 +5,7 @@
 
 #include "shared.h"
 
-#include "create_cursor.h"
+#include "cursor_create.h"
 
 static HICON CreateIconFromPNG(const std::string& filename, INT width, INT height, INT hotspotX, INT hotspotY);
 

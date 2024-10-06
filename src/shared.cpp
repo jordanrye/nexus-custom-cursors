@@ -13,4 +13,5 @@ Mumble::Data* MumbleLink = nullptr;
 Mumble::Identity* MumbleIdentity = nullptr;
 NexusLinkData* NexusLink = nullptr;
 
+CursorMap cursors;
 HCURSOR hCustomCursor = nullptr;

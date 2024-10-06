@@ -65,7 +65,7 @@
     <ClInclude Include="src\imgui\imstb_truetype.h">
       <Filter>Libraries\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="src\create_cursor.h">
+    <ClInclude Include="src\cursor_create.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utilities.h">
@@ -79,6 +79,15 @@
     </ClInclude>
     <ClInclude Include="src\stb\stb_image_resize2.h">
       <Filter>Libraries\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shared_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cursor_hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hash.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -109,7 +118,13 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp">
       <Filter>Libraries\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="src\create_cursor.cpp">
+    <ClCompile Include="src\cursor_create.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cursor_hash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\hash.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

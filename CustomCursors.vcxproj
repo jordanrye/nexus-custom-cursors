@@ -145,7 +145,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\create_cursor.h" />
+    <ClInclude Include="src\basic_types.h" />
+    <ClInclude Include="src\cursor_create.h" />
+    <ClInclude Include="src\cursor_hash.h" />
+    <ClInclude Include="src\cursor_load.h" />
+    <ClInclude Include="src\hash.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />
     <ClInclude Include="src\imgui\imgui_internal.h" />
@@ -157,15 +161,17 @@
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\mumble\Mumble.h" />
     <ClInclude Include="src\nexus\Nexus.h" />
-    <ClInclude Include="src\process_scanner.h" />
-    <ClInclude Include="src\process_scanner_types.h" />
+    <ClInclude Include="src\shared_types.h" />
     <ClInclude Include="src\stb\stb_image.h" />
     <ClInclude Include="src\stb\stb_image_resize2.h" />
     <ClInclude Include="src\utilities.h" />
     <ClInclude Include="src\version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\create_cursor.cpp" />
+    <ClCompile Include="src\cursor_create.cpp" />
+    <ClCompile Include="src\cursor_hash.cpp" />
+    <ClCompile Include="src\cursor_load.cpp" />
+    <ClCompile Include="src\hash.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
@@ -173,7 +179,6 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\settings.cpp" />
     <ClCompile Include="src\shared.cpp" />
-    <ClCompile Include="src\process_scanner.cpp" />
     <ClCompile Include="src\entry.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -19,14 +19,6 @@ namespace Settings
 
 	void Load(const std::filesystem::path& aPath);
 	void Save();
-
-	/* Cursor configuration */
-	extern std::string CursorFilePath;
-	extern E_FILE_FORMAT CursorFileFormat;
-	extern INT CursorWidth;
-	extern INT CursorHeight;
-	extern INT CursorHotspotX;
-	extern INT CursorHotspotY;
 } // namespace Settings
 
 #endif /* SETTINGS_H */
