@@ -14,7 +14,6 @@ extern AddonDefinition AddonDef;
 extern HMODULE hSelf;
 extern HWND hClient;
 
-extern std::filesystem::path Gw2RootDir;
 extern std::filesystem::path AddonDir;
 extern std::filesystem::path IconsDir;
 

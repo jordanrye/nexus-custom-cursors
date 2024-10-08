@@ -5,7 +5,6 @@ AddonDefinition AddonDef{};
 HMODULE hSelf = nullptr;
 HWND hClient = nullptr;
 
-std::filesystem::path Gw2RootDir{};
 std::filesystem::path AddonDir{};
 std::filesystem::path IconsDir{};
 

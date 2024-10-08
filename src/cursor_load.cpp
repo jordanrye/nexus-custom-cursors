@@ -7,7 +7,7 @@ static bool IsFileType(const std::string& str, const std::string& ext);
 
 void LoadCustomCursor(CursorPair& cursor)
 {
-    std::string filename = Gw2RootDir.string() + cursor.second.customFilePath;
+    std::string filename = IconsDir.string() + cursor.second.customFilePath;
 
     // cursor 1
     if (IsFileType(filename, ".png"))

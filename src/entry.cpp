@@ -32,8 +32,6 @@ SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
 	Hash key = GetCursorHash(hCursor);
 
-	APIDefs->Log(ELogLevel_INFO, "CustomCursors", std::to_string(key).c_str());
-
 	if (key != 0U)
 	{
 		auto it = cursors.find(key);
@@ -117,12 +115,12 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 	AddonDef.Version.Build = V_BUILD;
 	AddonDef.Version.Revision = V_REVISION;
 	AddonDef.Author = "Jordan";
-	AddonDef.Description = "Replace the default mouse cursors with custom icons.";
+	AddonDef.Description = "Replace any of the in-game cursors with custom icons.";
 	AddonDef.Load = AddonLoad;
 	AddonDef.Unload = AddonUnload;
 	AddonDef.Flags = EAddonFlags_IsVolatile;
 	AddonDef.Provider = EUpdateProvider_GitHub;
-	AddonDef.UpdateLink = "https://github.com/jordanrye/nexus-custom-cursors";
+	AddonDef.UpdateLink = "https://github.com/jordanrye/nexus-custom-cursors-public";
 
 	return &AddonDef;
 }
@@ -148,9 +146,8 @@ void AddonLoad(AddonAPI* aApi)
 	APIDefs->Renderer.Register(ERenderType_Render, AddonRender);
 	APIDefs->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
 
-	Gw2RootDir = APIDefs->Paths.GetGameDirectory();
-	AddonDir = APIDefs->Paths.GetAddonDirectory("CustomCursors");
-	IconsDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/cursors");
+	AddonDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/");
+	IconsDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/cursors/");
 
 	std::filesystem::create_directory(AddonDir);
 	std::filesystem::create_directory(IconsDir);
@@ -291,7 +288,7 @@ void AddonOptions()
 
 						if (GetOpenFileName(&ofn) == TRUE)
 						{
-							cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(Gw2RootDir.string().length());
+							cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(IconsDir.string().length());
 							LoadCustomCursor(cursor);
 							Settings::Save();
 						}
