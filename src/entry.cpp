@@ -237,122 +237,119 @@ void AddonRender()
 
 void AddonOptions()
 {
-	/* start outer table */
-	ImGui::BeginTable("Cursors", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
+	ImGui::BeginTable("Cursors", 7, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
 	{
-		ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+		float inputWidth = ImGui::GetWindowContentRegionWidth() / 6;
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0); ImGui::Text("UID");
+		ImGui::TableSetColumnIndex(1); ImGui::Text("Filepath");
+		ImGui::TableSetColumnIndex(2); ImGui::Text("Width");
+		ImGui::TableSetColumnIndex(3); ImGui::Text("Height");
+		ImGui::TableSetColumnIndex(4); ImGui::Text("Hotspot X");
+		ImGui::TableSetColumnIndex(5); ImGui::Text("Hotspot Y");
 
 		for (auto& cursor : cursors)
 		{
 			ImGui::TableNextRow();
+
+			//("Cursor##" + std::to_string(cursor.first)).c_str()
 		
-			/* preview */
-			ImGui::TableNextColumn();
-			ImGui::TextDisabled("<Icon>");
+			ImGui::TableSetColumnIndex(0);
+			ImGui::PaddedText(std::to_string(cursor.first).c_str(), 0.0F, 2.0F);
 
-			/* start inner table */
-			ImGui::TableNextColumn();
-			ImGui::BeginTable(("Cursor##" + std::to_string(cursor.first)).c_str(), 2, ImGuiTableFlags_NoBordersInBody);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+			ImGui::PushItemWidth(inputWidth * 1.5);
+			if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
 			{
-				ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed);
-				ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthStretch);
+				std::thread([&cursor]{
+					OPENFILENAME ofn = { 0 };
+					TCHAR szFile[MAX_PATH] = { 0 };
+					TCHAR initialDir[MAX_PATH] = { 0 };
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::PaddedText("UID", 0.0F, 4.0F);
-				ImGui::TableNextColumn();
-				ImGui::PaddedText(std::to_string(cursor.first).c_str(), 0.0F, 4.0F);
+					strcpy_s(initialDir, IconsDir.string().c_str());
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::PaddedText("Filepath", 0.0F, 4.0F);
-				ImGui::TableNextColumn();
-				if (ImGui::Button((cursor.second.customFilePath + "##Cursor").c_str(), ImVec2(ImGui::CalcItemWidth()-22, 0)))
+					ofn.lStructSize = sizeof(ofn);
+					ofn.hwndOwner = static_cast<HWND>(nullptr);
+					ofn.lpstrFile = szFile;
+					ofn.nMaxFile = sizeof(szFile);
+					ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
+					ofn.nFilterIndex = 2;
+					ofn.lpstrInitialDir = initialDir;
+					ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+					if (GetOpenFileName(&ofn) == TRUE)
+					{
+						cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(IconsDir.string().length());
+						LoadCustomCursor(cursor);
+						Settings::Save();
+					}
+				}).detach();
+			}
+			ImGui::PopItemWidth();
+			ImGui::PopStyleVar();
+
+			if (cursor.second.customFilePath != "")
+			{
+				ImGui::TableSetColumnIndex(2);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+				ImGui::PushItemWidth(inputWidth);
+				if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
 				{
-					std::thread([&cursor]{
-						OPENFILENAME ofn = { 0 };
-						TCHAR szFile[MAX_PATH] = { 0 };
-						TCHAR initialDir[MAX_PATH] = { 0 };
-
-						strcpy_s(initialDir, IconsDir.string().c_str());
-
-						ofn.lStructSize = sizeof(ofn);
-						ofn.hwndOwner = static_cast<HWND>(nullptr);
-						ofn.lpstrFile = szFile;
-						ofn.nMaxFile = sizeof(szFile);
-						ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
-						ofn.nFilterIndex = 2;
-						ofn.lpstrInitialDir = initialDir;
-						ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-						if (GetOpenFileName(&ofn) == TRUE)
-						{
-							cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(IconsDir.string().length());
-							LoadCustomCursor(cursor);
-							Settings::Save();
-						}
-					}).detach();
+					LoadCustomCursor(cursor);
+					Settings::Save();
 				}
-				ImGui::SameLine();
-				if (ImGui::Button("x##CursorRemove", ImVec2(18, 18)))
+				ImGui::PopItemWidth();
+				ImGui::PopStyleVar();
+
+				ImGui::TableSetColumnIndex(3);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+				ImGui::PushItemWidth(inputWidth);
+				if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
+				{
+					LoadCustomCursor(cursor);
+					Settings::Save();
+				}
+				ImGui::PopItemWidth();
+				ImGui::PopStyleVar();
+
+				if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
+				{
+					ImGui::TableSetColumnIndex(4);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+					ImGui::PushItemWidth(inputWidth);
+					if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
+					{
+						LoadCustomCursor(cursor);
+						Settings::Save();
+					}
+					ImGui::PopItemWidth();
+					ImGui::PopStyleVar();
+
+					ImGui::TableSetColumnIndex(5);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+					ImGui::PushItemWidth(inputWidth);
+					if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
+					{
+						LoadCustomCursor(cursor);
+						Settings::Save();
+					}
+					ImGui::PopItemWidth();
+					ImGui::PopStyleVar();
+				}
+
+				ImGui::TableSetColumnIndex(6);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0, 2.0));
+				if (ImGui::Button(("x##Remove" + std::to_string(cursor.first)).c_str()))
 				{
 					cursor.second = CursorProperties();
 					Settings::Save();
 				}
-
-				if (cursor.second.customFilePath != "")
-				{
-					ImGui::TableNextRow();
-					ImGui::TableNextColumn();
-					ImGui::PaddedText("Width", 0.0F, 4.0F);
-					ImGui::TableNextColumn();
-					if (ImGui::InputInt("##CursorWidth", &(cursor.second.customWidth), 8U, 8U))
-					{
-						LoadCustomCursor(cursor);
-						Settings::Save();
-					}
-
-					ImGui::TableNextRow();
-					ImGui::TableNextColumn();
-					ImGui::PaddedText("Height", 0.0F, 4.0F);
-					ImGui::TableNextColumn();
-					if (ImGui::InputInt("##CursorHeight", &(cursor.second.customHeight), 8U, 8U))
-					{
-						LoadCustomCursor(cursor);
-						Settings::Save();
-					}
-
-					if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableNextColumn();
-						ImGui::PaddedText("Hotspot X", 0.0F, 4.0F);
-						ImGui::TableNextColumn();
-						if (ImGui::InputInt("##CursorHotspotX", &(cursor.second.customHotspotX), 4U, 4U))
-						{
-							LoadCustomCursor(cursor);
-							Settings::Save();
-						}
-
-						ImGui::TableNextRow();
-						ImGui::TableNextColumn();
-						ImGui::PaddedText("Hotspot Y", 0.0F, 4.0F);
-						ImGui::TableNextColumn();
-						if (ImGui::InputInt("##CursorHotspotY", &(cursor.second.customHotspotY), 4U, 4U))
-						{
-							LoadCustomCursor(cursor);
-							Settings::Save();
-						}
-					}
-				}
-
-				/* end inner table */
-				ImGui::EndTable();
+				ImGui::PopStyleVar();
 			}
 		}
 
-		/* end outer table */
 		ImGui::EndTable();
 	}
 }

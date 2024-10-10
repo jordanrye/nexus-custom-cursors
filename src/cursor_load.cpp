@@ -9,7 +9,6 @@ void LoadCustomCursor(CursorPair& cursor)
 {
     std::string filename = IconsDir.string() + cursor.second.customFilePath;
 
-    // cursor 1
     if (IsFileType(filename, ".png"))
     {
         cursor.second.customCursor = CreateCursorFromPNG(
