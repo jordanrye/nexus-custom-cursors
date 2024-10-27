@@ -89,6 +89,9 @@
     <ClInclude Include="src\cursor_load.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\cursor_preview.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\entry.cpp">
@@ -125,6 +128,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\cursor_load.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cursor_preview.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

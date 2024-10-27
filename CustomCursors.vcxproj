@@ -71,12 +71,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IntDir>$(SolutionDir)build\$(Configuration)\.int\</IntDir>
-    <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\.int\</IntDir>
+    <OutDir>$(SolutionDir)build\</OutDir>
+    <TargetName>customcursors</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IntDir>$(SolutionDir)build\$(Configuration)\.int\</IntDir>
-    <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)build\.int\</IntDir>
+    <OutDir>$(SolutionDir)build\</OutDir>
+    <TargetName>customcursors</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -160,6 +162,7 @@
     <ClInclude Include="src\cursor_create.h" />
     <ClInclude Include="src\cursor_hash.h" />
     <ClInclude Include="src\cursor_load.h" />
+    <ClInclude Include="src\cursor_preview.h" />
     <ClInclude Include="src\hash.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />
@@ -182,6 +185,7 @@
     <ClCompile Include="src\cursor_create.cpp" />
     <ClCompile Include="src\cursor_hash.cpp" />
     <ClCompile Include="src\cursor_load.cpp" />
+    <ClCompile Include="src\cursor_preview.cpp" />
     <ClCompile Include="src\hash.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
