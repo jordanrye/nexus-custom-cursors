@@ -10,6 +10,7 @@
 
 #include "cursor_hash.h"
 #include "cursor_load.h"
+#include "cursor_preview.h"
 #include "settings.h"
 #include "shared.h"
 #include "version.h"
@@ -23,6 +24,10 @@ void AddonOptions();
 static void GetProcessPointers();
 static bool isSetProcessPointers = false;
 
+/// FIXME: temporary hack
+static Hash _UID = 0;
+static bool _ConfigModeEnabled = false;
+
 /*******************************************************************************
  * HOOK :: SetCursor
  ******************************************************************************/
@@ -32,7 +37,7 @@ SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
 	Hash key = GetCursorHash(hCursor);
 
-	if (key != 0U)
+	if (key != HASH_INVALID)
 	{
 		auto it = cursors.find(key);
 
@@ -40,13 +45,24 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
 		{
 			/* update cursor */
 			hCustomCursor = it->second.customCursor;
+
+			_UID = key;	/** FIXME: temporary hack */
+			
+			if (it->second.preview.bits.empty())
+			{
+				/* get preview for default cursor */
+				GetCursorPreview(hCursor, &it->second.preview);
+			}
 		}
 		else
 		{
-			/* key does not exist */
-			CursorProperties properties{};
-			properties.defaultCursor = hCursor;
-			cursors[key] = properties;
+			if (MumbleLink->Context.IsGameFocused)
+			{
+				/* key does not exist */
+				CursorProperties properties{};
+				GetCursorPreview(hCursor, &properties.preview);
+				cursors[key] = properties;
+			}
 		}
 	}
 
@@ -139,6 +155,9 @@ void AddonLoad(AddonAPI* aApi)
 	NexusLink = (NexusLinkData*)APIDefs->DataLink.Get("DL_NEXUS_LINK");
 	MumbleLink = (Mumble::Data*)APIDefs->DataLink.Get("DL_MUMBLE_LINK");
 
+	/// FIXME: move to render
+	((IDXGISwapChain*)APIDefs->SwapChain)->GetDevice(__uuidof(ID3D11Device), (void**)&D3D11Device);
+
 	APIDefs->Events.Subscribe("EV_MUMBLE_IDENTITY_UPDATED", OnMumbleIdentityUpdated);
 
 	GetProcessPointers();
@@ -190,8 +209,26 @@ void AddonRender()
 	static bool isHookedSetCursor = false;
 	static bool isHookedSetClassLongPtrA = false;
 	static bool isHookedSetClassLongPtrW = false;
+	
+	/// FIXME: temporary hack
+	static bool isHooked = false;
 
-	if (isSetProcessPointers)
+	// render configuration mode tooltip
+	if (_ConfigModeEnabled)
+	{
+		if (ImGui::Begin("Timeout", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs))
+		{
+			POINT CursorPos;
+			GetCursorPos(&CursorPos);
+			ImGui::SetWindowPos(ImVec2((CursorPos.x + 42), (CursorPos.y)));
+			std::stringstream ss;
+			ss << "UID: " << std::to_string(_UID);
+			ImGui::Text(ss.str().c_str());
+		}
+		ImGui::End();
+	}
+
+	if (!isHooked && isSetProcessPointers)
 	{
 		if (!isHookedSetCursor)
 		{
@@ -228,18 +265,24 @@ void AddonRender()
 		}
 		if (isHookedSetCursor && isHookedSetClassLongPtrA && isHookedSetClassLongPtrW)
 		{
-			std::thread([]() {
-				APIDefs->Renderer.Deregister(AddonRender);
-			}).detach();
+			/// FIXME: temporary hack
+			/// TODO: split into separate Renderer functions
+			isHooked = true;
+			// std::thread([]() {
+			// 	APIDefs->Renderer.Deregister(AddonRender);
+			// }).detach();
 		}
 	}
 }
 
 void AddonOptions()
 {
-	ImGui::BeginTable("Cursors", 7, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
+	ImGui::Checkbox("Configuration Mode", &_ConfigModeEnabled);
+
+	ImGui::BeginTable("Cursors", 8, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
 	{
-		float inputWidth = ImGui::GetWindowContentRegionWidth() / 6;
+		static const float windowPadding = 24;
+		float inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 9;
 
 		ImGui::TableNextRow();
 		ImGui::TableSetColumnIndex(0); ImGui::Text("UID");
@@ -260,7 +303,7 @@ void AddonOptions()
 
 			ImGui::TableSetColumnIndex(1);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-			ImGui::PushItemWidth(inputWidth * 1.5);
+			ImGui::PushItemWidth(inputWidth * 2);
 			if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
 			{
 				std::thread([&cursor]{
@@ -348,26 +391,18 @@ void AddonOptions()
 				}
 				ImGui::PopStyleVar();
 			}
+
+			ImGui::TableSetColumnIndex(7);
+			auto resource = cursor.second.preview.resource;
+			if (resource != nullptr)
+			{
+				ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
+			}
 		}
 
 		ImGui::EndTable();
 	}
 }
-
-// if (cursor.second.defaultCursor != nullptr)
-// {
-// 	ImGui::TableNextRow();
-// 	ImGui::TableNextColumn();
-// 	ImGui::PaddedText("Icon", 0.0F, 4.0F);
-// 	ImGui::TableNextColumn();
-// 	HDC hDC = GetDC(nullptr);
-// 	ImVec2 startPosition = ImGui::GetCursorPos();
-// 	ImGui::InvisibleButton("##PaddedText", ImVec2(32, 32));
-// 	ImVec2 endPosition = ImGui::GetCursorPos();
-// 	ImGui::SetCursorPos(startPosition);
-// 	DrawIcon(hDC, startPosition.x, startPosition.y, cursor.second.defaultCursor);
-// 	ImGui::SetCursorPos(endPosition);
-// }
 
 static void GetProcessPointers()
 {

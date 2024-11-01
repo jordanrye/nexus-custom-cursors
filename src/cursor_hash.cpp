@@ -7,30 +7,28 @@ Hash GetCursorHash(HCURSOR hCursor)
 {
 	Hash hash = HASH_INVALID;
 
-	ICONINFO icon{};
-	unsigned char* buf;
+	ICONINFO iconInfo{};
 	BITMAP bitmap;
-	HBITMAP hBitmap;
 
 	if (NULL != hCursor)
 	{
 		/* get icon info */
-		if (GetIconInfo(hCursor, &icon))
+		if (GetIconInfo(hCursor, &iconInfo))
 		{
-			/* select color bitmap, else select mask bitmap */
-			hBitmap = icon.hbmColor ? icon.hbmColor : icon.hbmMask;
+			/* select color bitmap, else select monochrome bitmap */
+			HBITMAP hBitmap = iconInfo.hbmColor ? iconInfo.hbmColor : iconInfo.hbmMask;
 
-			/* get icon bitmap */
+			/* get bitmap */
 			if (GetObject(hBitmap, sizeof(BITMAP), &bitmap))
 			{
 				/* allocate buffer */
 				uint32_t bufSz = bitmap.bmWidthBytes * bitmap.bmHeight;
-				buf = new unsigned char[bufSz];
+				uint8_t* buf = new uint8_t[bufSz];
 
 				// if buf created
-				if( buf != nullptr )
+				if (buf != nullptr)
 				{
-					// read icon bitmap pixel data
+					// read bitmap pixel data
 					uint32_t numBytes = GetBitmapBits(hBitmap, bufSz, buf);
 
 					if (numBytes > 0)
@@ -42,13 +40,13 @@ Hash GetCursorHash(HCURSOR hCursor)
 					delete[] buf;
 				}
 
-				if (icon.hbmColor)
+				if (iconInfo.hbmColor)
 				{
-					DeleteObject(icon.hbmColor); 
+					DeleteObject(iconInfo.hbmColor); 
 				}
-				if (icon.hbmMask)
+				if (iconInfo.hbmMask)
 				{
-					DeleteObject(icon.hbmMask);	
+					DeleteObject(iconInfo.hbmMask);	
 				}
 			}
 		}

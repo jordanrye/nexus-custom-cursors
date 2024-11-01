@@ -2,8 +2,10 @@
 #define SHARED_TYPES_H
 
 #include <Windows.h>
+#include <d3d11.h>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "basic_types.h"
 
@@ -15,9 +17,16 @@ typedef enum {
 
 typedef uint32_t Hash;
 
+typedef struct Image {
+	std::vector<uint32_t> bits;
+    ID3D11ShaderResourceView* resource;
+    uint32_t width;
+    uint32_t height;
+};
+
 typedef struct CursorProperties {
-	HCURSOR defaultCursor;
 	HCURSOR customCursor;
+    Image preview;
     std::string customFilePath;
     E_FILE_FORMAT customFileFormat;
     INT customWidth;

@@ -1,7 +1,7 @@
 #ifndef CURSOR_HASH_H
 #define CURSOR_HASH_H
 
-#include "Windows.h"
+#include <Windows.h>
 
 #include "shared_types.h"
 
