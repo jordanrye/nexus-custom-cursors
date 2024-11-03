@@ -47,6 +47,9 @@ namespace Settings
 					cursor["height"].get_to(cursors[key].customHeight);
 					cursor["hotspot_x"].get_to(cursors[key].customHotspotX);
 					cursor["hotspot_y"].get_to(cursors[key].customHotspotY);
+					cursor["preview"].get_to(cursors[key].preview.bits);
+					cursor["preview_width"].get_to(cursors[key].preview.width);
+					cursor["preview_height"].get_to(cursors[key].preview.height);
 				}
 			}
 		}
@@ -69,6 +72,9 @@ namespace Settings
 			obj["height"] = cursor.second.customHeight;
 			obj["hotspot_x"] = cursor.second.customHotspotX;
 			obj["hotspot_y"] = cursor.second.customHotspotY;
+			obj["preview"] = cursor.second.preview.bits;
+			obj["preview_width"] = cursor.second.preview.width;
+			obj["preview_height"] = cursor.second.preview.height;
 
 			Settings["cursors"].push_back(obj);
 		}

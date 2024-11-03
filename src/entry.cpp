@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <vector>
 
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
@@ -15,9 +16,12 @@
 #include "shared.h"
 #include "version.h"
 
+std::vector<Image*> aQueuedPreview;
+
 void OnMumbleIdentityUpdated(void* aEventArgs);
 void AddonLoad(AddonAPI* aApi);
 void AddonUnload();
+void AddonPreviewLoader();
 void AddonRender();
 void AddonOptions();
 
@@ -34,7 +38,8 @@ static bool _ConfigModeEnabled = false;
 LPVOID pSetCursor = nullptr; /* address of SetCursor */
 typedef HCURSOR(WINAPI *SETCURSOR)(HCURSOR); /* define calling convention */
 SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
-HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
+HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
+{
 	Hash key = GetCursorHash(hCursor);
 
 	if (key != HASH_INVALID)
@@ -46,23 +51,26 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
 			/* update cursor */
 			hCustomCursor = it->second.customCursor;
 
-			_UID = key;	/** FIXME: temporary hack */
-			
 			if (it->second.preview.bits.empty())
 			{
-				/* get preview for default cursor */
-				GetCursorPreview(hCursor, &it->second.preview);
+				/* get bits for default cursor */
+				GetBitsFromCursor(hCursor, &it->second.preview);
 			}
+			if (it->second.preview.resource == nullptr)
+			{
+				/* queue bits for resource creation */
+				aQueuedPreview.push_back(&it->second.preview);
+			}
+
+			_UID = key;	/** FIXME: temporary hack */
 		}
 		else
 		{
-			if (MumbleLink->Context.IsGameFocused)
-			{
-				/* key does not exist */
-				CursorProperties properties{};
-				GetCursorPreview(hCursor, &properties.preview);
-				cursors[key] = properties;
-			}
+			/* key does not exist */
+			CursorProperties properties{};
+			GetBitsFromCursor(hCursor, &properties.preview);
+			aQueuedPreview.push_back(&properties.preview);
+			cursors[key] = properties;
 		}
 	}
 
@@ -82,11 +90,13 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor) {
 LPVOID pSetClassLongPtrA = nullptr; /* address of SetClassLongPtrA */
 typedef HCURSOR(WINAPI *SETCLASSLONGPTRA)(HWND, INT, LONG_PTR); /* define calling convention */
 SETCLASSLONGPTRA fpSetClassLongPtrA = NULL; /* pointer to call original SetClassLongPtrA */
-HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, INT nIndex, LONG_PTR dwNewLong) {
+HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, INT nIndex, LONG_PTR dwNewLong)
+{
 	if (GCLP_HCURSOR == nIndex)
 	{
 		return fpSetClassLongPtrA(hWnd, nIndex, (LONG_PTR)hCustomCursor);
 	}
+
 	return fpSetClassLongPtrA(hWnd, nIndex, dwNewLong);
 }
 
@@ -96,11 +106,13 @@ HCURSOR WINAPI DetourSetClassLongPtrA(HWND hWnd, INT nIndex, LONG_PTR dwNewLong)
 LPVOID pSetClassLongPtrW = nullptr; /* address of SetClassLongPtrW */
 typedef HCURSOR(WINAPI* SETCLASSLONGPTRW)(HWND, INT, LONG_PTR); /* define calling convention */
 SETCLASSLONGPTRW fpSetClassLongPtrW = NULL; /* pointer to call original SetClassLongPtrW */
-HCURSOR WINAPI DetourSetClassLongPtrW(HWND hWnd, INT nIndex, LONG_PTR dwNewLong) {
+HCURSOR WINAPI DetourSetClassLongPtrW(HWND hWnd, INT nIndex, LONG_PTR dwNewLong)
+{
 	if (GCLP_HCURSOR == nIndex)
 	{
 		return fpSetClassLongPtrW(hWnd, nIndex, (LONG_PTR)hCustomCursor);
 	}
+
 	return fpSetClassLongPtrW(hWnd, nIndex, dwNewLong);
 }
 
@@ -131,7 +143,7 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
 	AddonDef.Version.Build = V_BUILD;
 	AddonDef.Version.Revision = V_REVISION;
 	AddonDef.Author = "Jordan";
-	AddonDef.Description = "Replace any of the in-game cursors with custom icons.";
+	AddonDef.Description = "Replace in-game cursors with custom icons.";
 	AddonDef.Load = AddonLoad;
 	AddonDef.Unload = AddonUnload;
 	AddonDef.Flags = EAddonFlags_IsVolatile;
@@ -162,6 +174,7 @@ void AddonLoad(AddonAPI* aApi)
 
 	GetProcessPointers();
 
+	APIDefs->Renderer.Register(ERenderType_PreRender, AddonPreviewLoader);
 	APIDefs->Renderer.Register(ERenderType_Render, AddonRender);
 	APIDefs->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
 
@@ -177,6 +190,7 @@ void AddonUnload()
 {
 	APIDefs->Renderer.Deregister(AddonOptions); 
 	APIDefs->Renderer.Deregister(AddonRender);
+	APIDefs->Renderer.Deregister(AddonPreviewLoader);
 
 	if (pSetCursor)
 	{
@@ -202,6 +216,15 @@ void AddonUnload()
 	APIDefs = nullptr;
 
 	Settings::Save();
+}
+
+void AddonPreviewLoader()
+{
+	while (aQueuedPreview.size() > 0)
+	{
+		CreateResourceFromBits(aQueuedPreview.front());
+		aQueuedPreview.erase(aQueuedPreview.begin());
+	}
 }
 
 void AddonRender()

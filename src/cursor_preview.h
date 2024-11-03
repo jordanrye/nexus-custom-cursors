@@ -3,6 +3,8 @@
 
 #include "shared.h"
 
-void GetCursorPreview(HCURSOR hCursor, Image* preview);
+void GetBitsFromCursor(HCURSOR hCursor, Image* image);
+
+void CreateResourceFromBits(Image* image);
 
 #endif /* CURSOR_PREVIEW_H */
