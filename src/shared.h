@@ -1,15 +1,14 @@
 #ifndef SHARED_H
 #define SHARED_H
 
-#include <filesystem>
-#include <d3d11.h>
-#include <dxgi.h>
+#include "shared_types.h"
+#include "utilities.h"
 
 #include "nexus/Nexus.h"
 #include "mumble/Mumble.h"
 
-#include "shared_types.h"
-#include "utilities.h"
+#include <d3d11.h>
+#include <filesystem>
 
 extern AddonAPI* APIDefs;
 extern AddonDefinition AddonDef;

@@ -1,20 +1,20 @@
-#include <Windows.h>
-#include <filesystem>
-#include <sstream>
-#include <string>
-#include <map>
-#include <vector>
-
-#include "nexus/Nexus.h"
-#include "mumble/Mumble.h"
-#include "imgui/imgui.h"
-
 #include "cursor_hash.h"
 #include "cursor_load.h"
 #include "cursor_preview.h"
 #include "settings.h"
 #include "shared.h"
 #include "version.h"
+
+#include "nexus/Nexus.h"
+#include "mumble/Mumble.h"
+#include "imgui/imgui.h"
+
+#include <Windows.h>
+#include <filesystem>
+#include <sstream>
+#include <string>
+#include <map>
+#include <vector>
 
 std::vector<Image*> aQueuedPreview;
 
@@ -40,7 +40,7 @@ typedef HCURSOR(WINAPI *SETCURSOR)(HCURSOR); /* define calling convention */
 SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 {
-	Hash key = GetCursorHash(hCursor);
+	uint32_t key = GetCursorHash(hCursor);
 
 	if (key != HASH_INVALID)
 	{
@@ -54,7 +54,7 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 			if (it->second.preview.bits.empty())
 			{
 				/* get bits for default cursor */
-				GetBitsFromCursor(hCursor, &it->second.preview);
+				GetBitsFromCursor(hCursor, it->second.preview.width, it->second.preview.height, it->second.preview.bits);
 			}
 			if (it->second.preview.resource == nullptr)
 			{
@@ -68,7 +68,7 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 		{
 			/* key does not exist */
 			CursorProperties properties{};
-			GetBitsFromCursor(hCursor, &properties.preview);
+			GetBitsFromCursor(hCursor, properties.preview.width, properties.preview.height, properties.preview.bits);
 			aQueuedPreview.push_back(&properties.preview);
 			cursors[key] = properties;
 		}
@@ -222,7 +222,8 @@ void AddonPreviewLoader()
 {
 	while (aQueuedPreview.size() > 0)
 	{
-		CreateResourceFromBits(aQueuedPreview.front());
+		auto preview = aQueuedPreview.front();
+		CreateResourceFromBits(preview->width, preview->height, preview->bits, &(preview->resource));
 		aQueuedPreview.erase(aQueuedPreview.begin());
 	}
 }
@@ -243,7 +244,7 @@ void AddonRender()
 		{
 			POINT CursorPos;
 			GetCursorPos(&CursorPos);
-			ImGui::SetWindowPos(ImVec2((CursorPos.x + 42), (CursorPos.y)));
+			ImGui::SetWindowPos(ImVec2(static_cast<float32_t>(CursorPos.x + 42), static_cast<float32_t>(CursorPos.y)));
 			std::stringstream ss;
 			ss << "UID: " << std::to_string(_UID);
 			ImGui::Text(ss.str().c_str());

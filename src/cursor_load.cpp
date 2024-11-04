@@ -1,7 +1,9 @@
-#include <string>
+#include "cursor_load.h"
 
 #include "cursor_create.h"
-#include "cursor_load.h"
+#include "shared.h"
+
+#include <string>
 
 static bool IsFileType(const std::string& str, const std::string& ext);
 
@@ -35,6 +37,7 @@ void LoadCustomCursor(CursorPair& cursor)
     }
     else
     {
+        APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load custom cursor (unsupported file type).");
         cursor.second.customCursor = NULL;
     }
 }

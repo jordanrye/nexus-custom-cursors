@@ -1,25 +1,24 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb/stb_image_resize2.h"
+#include "cursor_create.h"
 
 #include "shared.h"
 
-#include "cursor_create.h"
+#include "stb/stb_image.h"
+#include "stb/stb_image_resize2.h"
 
-static HICON CreateIconFromPNG(const std::string& filename, INT width, INT height, INT hotspotX, INT hotspotY);
+static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY);
 
-HCURSOR CreateCursorFromPNG(const std::string& filename, INT width, INT height, INT hotspotX, INT hotspotY)
+HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY)
 {
     return static_cast<HCURSOR>(CreateIconFromPNG(filename, width, height, hotspotX, hotspotY));
 }
 
-static HICON CreateIconFromPNG(const std::string& filename, INT width, INT height, INT hotspotX, INT hotspotY)
+static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY)
 {
-    static const INT STBI_RGBA = 4;
+    static const int32_t STBI_RGBA = 4;
+    HICON hIcon = nullptr;
 
     /* attempt to load image from file */
-    INT imageWidth, imageHeight, imageChannels;
+    int32_t imageWidth, imageHeight, imageChannels;
     stbi_uc* pixels = stbi_load(filename.c_str(), &imageWidth, &imageHeight, &imageChannels, STBI_RGBA);
 
     if (pixels)
@@ -46,7 +45,7 @@ static HICON CreateIconFromPNG(const std::string& filename, INT width, INT heigh
             /* attempt to create colour bitmap */
             HDC hDeviceContext;
             hDeviceContext = GetDC(nullptr);
-            unsigned char* colourBits;
+            uint8_t* colourBits;
             auto colour = CreateDIBSection(hDeviceContext, (BITMAPINFO*)&header, DIB_RGB_COLORS, (void**)&colourBits, nullptr, (DWORD)0);
             ReleaseDC(nullptr, hDeviceContext);
 
@@ -58,7 +57,7 @@ static HICON CreateIconFromPNG(const std::string& filename, INT width, INT heigh
                 if (mask)
                 {
                     /* copy pixels to colour bitmap */
-                    unsigned char* tempPixels = resizedPixels;
+                    uint8_t* tempPixels = resizedPixels;
                     for (int i = 0; i < (width * height); i++)
                     {
                         colourBits[0] = tempPixels[2];
@@ -70,48 +69,42 @@ static HICON CreateIconFromPNG(const std::string& filename, INT width, INT heigh
                     }
 
                     /* create icon info */
-                    ICONINFO icon{};
-                    icon.fIcon = FALSE;
-                    icon.xHotspot = hotspotX;
-                    icon.yHotspot = hotspotY;
-                    icon.hbmMask = mask;
-                    icon.hbmColor = colour;
+                    ICONINFO iconInfo{};
+                    iconInfo.fIcon = FALSE;
+                    iconInfo.xHotspot = hotspotX;
+                    iconInfo.yHotspot = hotspotY;
+                    iconInfo.hbmMask = mask;
+                    iconInfo.hbmColor = colour;
 
-                    /* create icon handle */
-                    HICON handle = CreateIconIndirect(&icon);
+                    /* create icon */
+                    hIcon = CreateIconIndirect(&iconInfo);
 
                     stbi_image_free(resizedPixels);
                     DeleteObject(colour);
                     DeleteObject(mask);
-
-                    return handle;
                 }
                 else
                 {
                     APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create monochrome mask bitmap.");
                     stbi_image_free(resizedPixels);
                     DeleteObject(colour);
-                    return nullptr;
                 }
             }
             else
             {
                 APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create colour bitmap.");
                 stbi_image_free(resizedPixels);
-                return nullptr;
             }
         }
         else
         {
             APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to resize image.");
-            return nullptr;
         }
     }
     else
     {
         APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load image.");
-        return nullptr;
     }
 
-    return nullptr;
+    return hIcon;
 }

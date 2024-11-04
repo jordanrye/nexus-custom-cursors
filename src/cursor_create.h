@@ -1,9 +1,11 @@
-#ifndef CREATE_CURSOR_H
-#define CREATE_CURSOR_H
+#ifndef CURSOR_CREATE_H
+#define CURSOR_CREATE_H
 
-#include "Windows.h"
+#include "basic_types.h"
+
+#include <Windows.h>
 #include <string>
 
-HCURSOR CreateCursorFromPNG(const std::string& filename, INT width, INT height, INT hotspotX, INT hotspotY);
+HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY);
 
-#endif /* CREATE_CURSOR_H */
+#endif /* CURSOR_CREATE_H */

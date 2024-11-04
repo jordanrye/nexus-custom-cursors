@@ -1,11 +1,12 @@
-#include <Windows.h>
-
 #include "cursor_hash.h"
+
 #include "hash.h"
 
-Hash GetCursorHash(HCURSOR hCursor)
+#include <Windows.h>
+
+uint32_t GetCursorHash(HCURSOR hCursor)
 {
-	Hash hash = HASH_INVALID;
+	uint32_t hash = HASH_INVALID;
 
 	ICONINFO iconInfo{};
 	BITMAP bitmap;
@@ -40,14 +41,9 @@ Hash GetCursorHash(HCURSOR hCursor)
 					delete[] buf;
 				}
 
-				if (iconInfo.hbmColor)
-				{
-					DeleteObject(iconInfo.hbmColor); 
-				}
-				if (iconInfo.hbmMask)
-				{
-					DeleteObject(iconInfo.hbmMask);	
-				}
+				/* clean-up */
+				DeleteObject(iconInfo.hbmColor); 
+				DeleteObject(iconInfo.hbmMask);	
 			}
 		}
 	}

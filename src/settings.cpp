@@ -1,9 +1,10 @@
-#include <filesystem>
-#include <fstream>
+#include "settings.h"
 
 #include "cursor_load.h"
+#include "shared.h"
 
-#include "settings.h"
+#include <filesystem>
+#include <fstream>
 
 namespace Settings
 {

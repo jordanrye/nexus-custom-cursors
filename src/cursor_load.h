@@ -1,7 +1,7 @@
 #ifndef CURSOR_LOAD_H
 #define CURSOR_LOAD_H
 
-#include "shared.h"
+#include "shared_types.h"
 
 void LoadCustomCursor(CursorPair& cursor);
 

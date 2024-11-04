@@ -1,13 +1,11 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include <filesystem>
-#include <mutex>
-
 #include "imgui/imgui.h"
 #include "nlohmann/json.hpp"
 
-#include "shared.h"
+#include <filesystem>
+#include <mutex>
 
 using json = nlohmann::json;
 

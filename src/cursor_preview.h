@@ -1,10 +1,12 @@
 #ifndef CURSOR_PREVIEW_H
 #define CURSOR_PREVIEW_H
 
-#include "shared.h"
+#include "shared_types.h"
 
-void GetBitsFromCursor(HCURSOR hCursor, Image* image);
+#include <Windows.h>
 
-void CreateResourceFromBits(Image* image);
+void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits);
+
+void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, const std::vector<uint32_t>& pBits, ID3D11ShaderResourceView** ppResource);
 
 #endif /* CURSOR_PREVIEW_H */

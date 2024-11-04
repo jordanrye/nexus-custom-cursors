@@ -1,36 +1,37 @@
+#include "cursor_preview.h"
+
+#include "shared.h"
+
+#include "stb/stb_image.h"
+
 #include <Windows.h>
 #include <d3d11.h>
 
-// #define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
-
-#include "cursor_preview.h"
-
-void GetBitsFromCursor(HCURSOR hCursor, Image* image)
+void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits)
 {
     ICONINFO iconInfo{};
-    BITMAP bitmap{};
-    BITMAPINFO bitmapInfo{};
 
     if (GetIconInfo(hCursor, &iconInfo))
     {
         /* select color bitmap, else select monochrome bitmap */
         HBITMAP hBitmap = iconInfo.hbmColor ? iconInfo.hbmColor : iconInfo.hbmMask;
+        BITMAP bitmap{};
 
         if (GetObject(hBitmap, sizeof(bitmap), &bitmap))
         {
             /* get image dimensions */
-            image->width = bitmap.bmWidth;
-            image->height = bitmap.bmHeight;
+            pWidth = bitmap.bmWidth;
+            pHeight = bitmap.bmHeight;
 
-            /* set container sizes */
-            image->bits.resize(image->width * image->height);
-            uint32_t* bits = new uint32_t[image->width * image->height];
+            /* set array sizes */
+            pBits.resize(pWidth * pHeight);
+            uint32_t* bits = new uint32_t[pWidth * pHeight];
 
-            /* construct bitmap info header */
+            /* create bitmap info header */
+            BITMAPINFO bitmapInfo{};
             bitmapInfo.bmiHeader.biSize = sizeof(bitmapInfo.bmiHeader);
-            bitmapInfo.bmiHeader.biWidth = image->width;
-            bitmapInfo.bmiHeader.biHeight = image->height;
+            bitmapInfo.bmiHeader.biWidth = pWidth;
+            bitmapInfo.bmiHeader.biHeight = pHeight;
             bitmapInfo.bmiHeader.biPlanes = 1;
             bitmapInfo.bmiHeader.biBitCount = 32;
             bitmapInfo.bmiHeader.biCompression = BI_RGB;
@@ -43,69 +44,67 @@ void GetBitsFromCursor(HCURSOR hCursor, Image* image)
             if (hDC_Bitmap != nullptr)
             {
                 SelectObject(hDC_Bitmap, hBitmap);
-                GetDIBits(hDC_Bitmap, hBitmap, 0, image->height, bits, &bitmapInfo, DIB_RGB_COLORS);
+                GetDIBits(hDC_Bitmap, hBitmap, 0, pHeight, bits, &bitmapInfo, DIB_RGB_COLORS);
             }
 
             /* arrange bits */
-            for (uint32_t y = 0U; y < image->height; y++)
+            for (uint32_t y = 0U; y < pHeight; y++)
             {
-                for (uint32_t x = 0U; x < image->width; x++)
+                for (uint32_t x = 0U; x < pWidth; x++)
                 {
-                    auto pos = (y * image->width) + x;
-                    auto bit = bits[image->width * (image->height - 1 - y) + x] | 0x00000000;
-                    image->bits.at(pos) = bit;
+                    auto pos = (y * pWidth) + x;
+                    auto bit = bits[pWidth * (pHeight - 1 - y) + x] | 0x00000000;
+                    pBits.at(pos) = bit;
                 }
             }
 
-            /* clean up */
+            /* clean-up */
             delete[] bits;
-            if (iconInfo.hbmMask != NULL) { DeleteObject(iconInfo.hbmMask); }
-            if (iconInfo.hbmColor != NULL) { DeleteObject(iconInfo.hbmColor); }
-            if (hDC_Screen != NULL) { ReleaseDC(NULL, hDC_Screen); }
-            if (hDC_Bitmap != NULL) { DeleteDC(hDC_Bitmap); }
+            DeleteObject(iconInfo.hbmMask);
+            DeleteObject(iconInfo.hbmColor);
+            ReleaseDC(NULL, hDC_Screen);
+            DeleteDC(hDC_Bitmap);
         }
     }
 }
 
-void CreateResourceFromBits(Image* image)
+void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, const std::vector<uint32_t>& pBits, ID3D11ShaderResourceView** ppResource)
 {
-    if (image != nullptr)
+    /* create texture description */
+    D3D11_TEXTURE2D_DESC texDesc{};
+    texDesc.Width = pWidth;
+    texDesc.Height = pHeight;
+    texDesc.MipLevels = 1;
+    texDesc.ArraySize = 1;
+    texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.Usage = D3D11_USAGE_DEFAULT;
+    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texDesc.CPUAccessFlags = 0;
+
+    /* copy bits to subresource */
+    D3D11_SUBRESOURCE_DATA subresource{};
+    subresource.pSysMem = &pBits[0];
+    subresource.SysMemPitch = texDesc.Width * 4;
+    subresource.SysMemSlicePitch = 0;
+
+    /* create texture */
+    ID3D11Texture2D* pTexture = nullptr;
+    D3D11Device->CreateTexture2D(&texDesc, &subresource, &pTexture);
+
+    if (pTexture != nullptr)
     {
-        /* create texture description */
-        D3D11_TEXTURE2D_DESC desc{};
-        desc.Width = image->width;
-        desc.Height = image->height;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
+        /* create resource description */
+        D3D11_SHADER_RESOURCE_VIEW_DESC rsrcDesc{};
+        rsrcDesc.Format = texDesc.Format;
+        rsrcDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        rsrcDesc.Texture2D.MipLevels = texDesc.MipLevels;
+        rsrcDesc.Texture2D.MostDetailedMip = 0;
 
-        /* copy bits to subresource */
-        D3D11_SUBRESOURCE_DATA subresource{};
-        subresource.pSysMem = &image->bits[0];
-        subresource.SysMemPitch = desc.Width * 4;
-        subresource.SysMemSlicePitch = 0;
-
-        /* create texture */
-        ID3D11Texture2D* texture = nullptr;
-        D3D11Device->CreateTexture2D(&desc, &subresource, &texture);
-
-        if (texture != nullptr)
-        {
-            /* create resource description */
-            D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-            srvDesc.Format = desc.Format;
-            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D.MipLevels = desc.MipLevels;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-
-            /* create resource */
-            D3D11Device->CreateShaderResourceView(texture, &srvDesc, &image->resource);
-            
-            texture->Release();
-        }
+        /* create resource */
+        D3D11Device->CreateShaderResourceView(pTexture, &rsrcDesc, ppResource);
     }
+
+    /* clean-up */
+    pTexture->Release();
 }

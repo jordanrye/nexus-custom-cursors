@@ -1,12 +1,12 @@
 #ifndef CURSOR_HASH_H
 #define CURSOR_HASH_H
 
+#include "basic_types.h"
+
 #include <Windows.h>
 
-#include "shared_types.h"
+const uint32_t HASH_INVALID = 0ULL;
 
-const Hash HASH_INVALID = 0ULL;
-
-Hash GetCursorHash(HCURSOR hcursor);
+uint32_t GetCursorHash(HCURSOR hCursor);
 
 #endif /* CURSOR_HASH_H */
