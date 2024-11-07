@@ -18,5 +18,6 @@ Mumble::Data* MumbleLink = nullptr;
 Mumble::Identity* MumbleIdentity = nullptr;
 NexusLinkData* NexusLink = nullptr;
 
-CursorMap cursors;
+CursorMap Cursors;
 HCURSOR hCustomCursor = nullptr;
+std::vector<CursorPreview*> aQueuedPreview;

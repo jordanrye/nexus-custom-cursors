@@ -10,24 +10,24 @@
 #include <vector>
 
 typedef enum {
-	E_FILE_FORMAT_INV = 0,
-	E_FILE_FORMAT_PNG = 1,
-	E_FILE_FORMAT_CUR = 2,
-	E_FILE_FORMAT_X11 = 3
+    E_FILE_FORMAT_INV = 0,
+    E_FILE_FORMAT_PNG = 1,
+    E_FILE_FORMAT_CUR = 2,
+    E_FILE_FORMAT_X11 = 3
 } E_FILE_FORMAT;
 
 typedef uint32_t Hash;
 
-struct Image {
-	std::vector<uint32_t> bits;
+struct CursorPreview {
+    std::vector<uint32_t> bits;
     ID3D11ShaderResourceView* resource;
     uint32_t width;
     uint32_t height;
 };
 
 struct CursorProperties {
-	HCURSOR customCursor;
-    Image preview;
+    HCURSOR customCursor;
+    CursorPreview preview;
     std::string customFilePath;
     E_FILE_FORMAT customFileFormat;
     int32_t customWidth;

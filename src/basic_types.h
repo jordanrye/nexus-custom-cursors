@@ -20,24 +20,27 @@ typedef float float32_t;
 typedef double float64_t;
 
 /* two dimension vector */
-typedef struct vec2 {
-	float32_t x;
-	float32_t y;
+typedef struct vec2
+{
+    float32_t x;
+    float32_t y;
 } vec2;
 
 /* three dimension vector */
-typedef struct vec3 {
-	float32_t x;
-	float32_t y;
-	float32_t z;
+typedef struct vec3
+{
+    float32_t x;
+    float32_t y;
+    float32_t z;
 } vec3;
 
 /* four dimension vector */
-typedef struct vec4 {
-	float32_t x;
-	float32_t y;
-	float32_t z;
-	float32_t w;
+typedef struct vec4
+{
+    float32_t x;
+    float32_t y;
+    float32_t z;
+    float32_t w;
 } vec4;
 
 #endif /* BASIC_TYPES_H */

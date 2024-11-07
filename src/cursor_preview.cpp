@@ -60,8 +60,8 @@ void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std
 
             /* clean-up */
             delete[] bits;
-            DeleteObject(iconInfo.hbmMask);
-            DeleteObject(iconInfo.hbmColor);
+            if (iconInfo.hbmMask != nullptr) { DeleteObject(iconInfo.hbmMask); }
+            if (iconInfo.hbmColor != nullptr) { DeleteObject(iconInfo.hbmColor); }
             ReleaseDC(NULL, hDC_Screen);
             DeleteDC(hDC_Bitmap);
         }
@@ -70,41 +70,44 @@ void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std
 
 void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, const std::vector<uint32_t>& pBits, ID3D11ShaderResourceView** ppResource)
 {
-    /* create texture description */
-    D3D11_TEXTURE2D_DESC texDesc{};
-    texDesc.Width = pWidth;
-    texDesc.Height = pHeight;
-    texDesc.MipLevels = 1;
-    texDesc.ArraySize = 1;
-    texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    texDesc.SampleDesc.Count = 1;
-    texDesc.Usage = D3D11_USAGE_DEFAULT;
-    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    texDesc.CPUAccessFlags = 0;
-
-    /* copy bits to subresource */
-    D3D11_SUBRESOURCE_DATA subresource{};
-    subresource.pSysMem = &pBits[0];
-    subresource.SysMemPitch = texDesc.Width * 4;
-    subresource.SysMemSlicePitch = 0;
-
-    /* create texture */
-    ID3D11Texture2D* pTexture = nullptr;
-    D3D11Device->CreateTexture2D(&texDesc, &subresource, &pTexture);
-
-    if (pTexture != nullptr)
+    if ((pWidth != 0U) && (pHeight != 0U) && !pBits.empty())
     {
-        /* create resource description */
-        D3D11_SHADER_RESOURCE_VIEW_DESC rsrcDesc{};
-        rsrcDesc.Format = texDesc.Format;
-        rsrcDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        rsrcDesc.Texture2D.MipLevels = texDesc.MipLevels;
-        rsrcDesc.Texture2D.MostDetailedMip = 0;
+        /* create texture description */
+        D3D11_TEXTURE2D_DESC texDesc{};
+        texDesc.Width = pWidth;
+        texDesc.Height = pHeight;
+        texDesc.MipLevels = 1;
+        texDesc.ArraySize = 1;
+        texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.Usage = D3D11_USAGE_DEFAULT;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        texDesc.CPUAccessFlags = 0;
 
-        /* create resource */
-        D3D11Device->CreateShaderResourceView(pTexture, &rsrcDesc, ppResource);
+        /* copy bits to subresource */
+        D3D11_SUBRESOURCE_DATA subresource{};
+        subresource.pSysMem = &pBits[0];
+        subresource.SysMemPitch = texDesc.Width * 4;
+        subresource.SysMemSlicePitch = 0;
+
+        /* create texture */
+        ID3D11Texture2D* pTexture = nullptr;
+        D3D11Device->CreateTexture2D(&texDesc, &subresource, &pTexture);
+
+        if (pTexture != nullptr)
+        {
+            /* create resource description */
+            D3D11_SHADER_RESOURCE_VIEW_DESC rsrcDesc{};
+            rsrcDesc.Format = texDesc.Format;
+            rsrcDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            rsrcDesc.Texture2D.MipLevels = texDesc.MipLevels;
+            rsrcDesc.Texture2D.MostDetailedMip = 0;
+
+            /* create resource */
+            D3D11Device->CreateShaderResourceView(pTexture, &rsrcDesc, ppResource);
+        }
+
+        /* clean-up */
+        pTexture->Release();
     }
-
-    /* clean-up */
-    pTexture->Release();
 }

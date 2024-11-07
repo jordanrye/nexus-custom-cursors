@@ -21,13 +21,13 @@ static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32
     int32_t imageWidth, imageHeight, imageChannels;
     stbi_uc* pixels = stbi_load(filename.c_str(), &imageWidth, &imageHeight, &imageChannels, STBI_RGBA);
 
-    if (pixels)
+    if (pixels != nullptr)
     {
         /* attempt to resize image */
         stbi_uc* resizedPixels = stbir_resize_uint8_linear(pixels, imageWidth, imageHeight, 0, nullptr, width, height, 0, STBIR_RGBA);
         stbi_image_free(pixels);
 
-        if (resizedPixels)
+        if (resizedPixels != nullptr)
         {
             /* construct bitmap header */
             BITMAPV5HEADER header{};
@@ -49,12 +49,12 @@ static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32
             auto colour = CreateDIBSection(hDeviceContext, (BITMAPINFO*)&header, DIB_RGB_COLORS, (void**)&colourBits, nullptr, (DWORD)0);
             ReleaseDC(nullptr, hDeviceContext);
 
-            if (colour)
+            if (colour != nullptr)
             {
                 /* attempt to create monochrome mask bitmap */
                 auto mask = CreateBitmap(width, height, 1, 1, nullptr);
 
-                if (mask)
+                if (mask != nullptr)
                 {
                     /* copy pixels to colour bitmap */
                     uint8_t* tempPixels = resizedPixels;
@@ -79,22 +79,24 @@ static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32
                     /* create icon */
                     hIcon = CreateIconIndirect(&iconInfo);
 
-                    stbi_image_free(resizedPixels);
-                    DeleteObject(colour);
+                    /* clean-up */
                     DeleteObject(mask);
                 }
                 else
                 {
-                    APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create monochrome mask bitmap.");
-                    stbi_image_free(resizedPixels);
-                    DeleteObject(colour);
+                    APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create bitmap mask.");
                 }
+
+                /* clean-up */
+                DeleteObject(colour);
             }
             else
             {
-                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create colour bitmap.");
-                stbi_image_free(resizedPixels);
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to create bitmap colour.");
             }
+
+            /* clean-up */
+            stbi_image_free(resizedPixels);
         }
         else
         {

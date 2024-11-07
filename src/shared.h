@@ -9,6 +9,7 @@
 
 #include <d3d11.h>
 #include <filesystem>
+#include <vector>
 
 extern AddonAPI* APIDefs;
 extern AddonDefinition AddonDef;
@@ -23,7 +24,9 @@ extern Mumble::Data* MumbleLink;
 extern Mumble::Identity* MumbleIdentity;
 extern NexusLinkData* NexusLink;
 
-extern CursorMap cursors;
+extern CursorMap Cursors;
 extern HCURSOR hCustomCursor;
+
+extern std::vector<CursorPreview*> aQueuedPreview;
 
 #endif /* SHARED_H */

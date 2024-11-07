@@ -8,93 +8,170 @@
 
 namespace Settings
 {
-	std::mutex Mutex;
-	std::filesystem::path SettingsPath;
-	json Settings = json::object();
+    std::mutex Mutex;
+    std::filesystem::path SettingsPath;
+    std::filesystem::path PreviewsPath;
+    json Settings = json::object();
+    json Previews = json::object();
 
-	static void LoadCustomCursors();
+    void DeserialiseSettings(json object);
+    void DeserialisePreviews(json object);
+    void LoadCustomCursors();
 
-	void Load(const std::filesystem::path& aPath)
-	{
-		SettingsPath = aPath;
+    json SerialiseSetting(CursorPair cursor);
+    json SerialisePreview(CursorPair cursor);
+    void QueuePreviews();
 
-		Mutex.lock();
-		{
-			try
-			{
-				std::ifstream file(SettingsPath);
-				Settings = json::parse(file);
-				file.close();
-			}
-			catch (json::parse_error& ex)
-			{
-				APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "settings.json could not be parsed.");
-				APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
-			}
-		}
-		Mutex.unlock();
+    void LoadSettings(const std::filesystem::path& aPath)
+    {
+        SettingsPath = aPath;
 
-		if (!Settings.is_null())
-		{
-			if (!Settings["cursors"].is_null())
-			{
-				for (auto &cursor : Settings["cursors"])
-				{
-					Hash key = 0;
-					cursor["cursor_id"].get_to(key);
-					cursor["file_path"].get_to(cursors[key].customFilePath);
-					cursor["file_format"].get_to(cursors[key].customFileFormat);
-					cursor["width"].get_to(cursors[key].customWidth);
-					cursor["height"].get_to(cursors[key].customHeight);
-					cursor["hotspot_x"].get_to(cursors[key].customHotspotX);
-					cursor["hotspot_y"].get_to(cursors[key].customHotspotY);
-					cursor["preview"].get_to(cursors[key].preview.bits);
-					cursor["preview_width"].get_to(cursors[key].preview.width);
-					cursor["preview_height"].get_to(cursors[key].preview.height);
-				}
-			}
-		}
+        Mutex.lock();
+        {
+            try
+            {
+                std::ifstream file(SettingsPath);
+                Settings = json::parse(file);
+                file.close();
+            }
+            catch (json::parse_error& ex)
+            {
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "settings.json could not be parsed.");
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+            }
+        }
+        Mutex.unlock();
 
-		/* load cursors into CursorMap */
-		LoadCustomCursors();
-	}
+        DeserialiseSettings(Settings);
+        LoadCustomCursors();
+    }
 
-	void Save()
-	{
-		Settings["cursors"] = json::array();
+    void LoadPreviews(const std::filesystem::path& aPath)
+    {
+        PreviewsPath = aPath;
 
-		for(auto& cursor : cursors)
-		{
-			json obj{};
-			obj["cursor_id"] = cursor.first;
-			obj["file_path"] = cursor.second.customFilePath;
-			obj["file_format"] = cursor.second.customFileFormat;
-			obj["width"] = cursor.second.customWidth;
-			obj["height"] = cursor.second.customHeight;
-			obj["hotspot_x"] = cursor.second.customHotspotX;
-			obj["hotspot_y"] = cursor.second.customHotspotY;
-			obj["preview"] = cursor.second.preview.bits;
-			obj["preview_width"] = cursor.second.preview.width;
-			obj["preview_height"] = cursor.second.preview.height;
+        Mutex.lock();
+        {
+            try
+            {
+                std::ifstream file(PreviewsPath);
+                Previews = json::parse(file);
+                file.close();
+            }
+            catch (json::parse_error& ex)
+            {
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "previews.json could not be parsed.");
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+            }
+        }
+        Mutex.unlock();
 
-			Settings["cursors"].push_back(obj);
-		}
+        DeserialisePreviews(Previews);
+        QueuePreviews();
+    }
 
-		Mutex.lock();
-		{
-			std::ofstream file(SettingsPath);
-			file << Settings.dump(1, '\t') << std::endl;
-			file.close();
-		}
-		Mutex.unlock();
-	}
+    void Save()
+    {
+        Settings["cursors"] = json::array();
+        Previews["cursors"] = json::array();
 
-	static void LoadCustomCursors()
-	{
-		for (auto& cursor : cursors)
-		{
-			LoadCustomCursor(cursor);
-		}
-	}
+        for (auto& cursor : Cursors)
+        {
+            Settings["cursors"].push_back(SerialiseSetting(cursor));
+            Previews["cursors"].push_back(SerialisePreview(cursor));
+        }
+
+        Mutex.lock();
+        {
+            /* save to settings.json */
+            std::ofstream file(SettingsPath);
+            file << Settings.dump(1, '\t') << std::endl;
+            file.close();
+
+            /* save to previews.json */
+            std::ofstream previewFile(PreviewsPath);
+            previewFile << Previews.dump(1, '\t') << std::endl;
+            previewFile.close();
+        }
+        Mutex.unlock();
+    }
+
+    void DeserialiseSettings(json object)
+    {
+        if (!object.is_null())
+        {
+            if (!object["cursors"].is_null())
+            {
+                for (auto &cursor : object["cursors"])
+                {
+                    Hash key = 0;
+                    cursor["cursor_id"].get_to(key);
+                    cursor["file_path"].get_to(Cursors[key].customFilePath);
+                    cursor["file_format"].get_to(Cursors[key].customFileFormat);
+                    cursor["width"].get_to(Cursors[key].customWidth);
+                    cursor["height"].get_to(Cursors[key].customHeight);
+                    cursor["hotspot_x"].get_to(Cursors[key].customHotspotX);
+                    cursor["hotspot_y"].get_to(Cursors[key].customHotspotY);
+                }
+            }
+        }
+    }
+
+    void DeserialisePreviews(json object)
+    {
+        if (!object.is_null())
+        {
+            if (!object["cursors"].is_null())
+            {
+                for (auto &cursor : object["cursors"])
+                {
+                    Hash key = 0;
+                    cursor["cursor_id"].get_to(key);
+                    cursor["raw_bits"].get_to(Cursors[key].preview.bits);
+                    cursor["raw_width"].get_to(Cursors[key].preview.width);
+                    cursor["raw_height"].get_to(Cursors[key].preview.height);
+                }
+            }
+        }
+    }
+
+    void LoadCustomCursors()
+    {
+        for (auto& cursor : Cursors)
+        {
+            LoadCustomCursor(cursor);
+        }
+    }
+
+    json SerialiseSetting(CursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["file_path"] = cursor.second.customFilePath;
+        object["file_format"] = cursor.second.customFileFormat;
+        object["width"] = cursor.second.customWidth;
+        object["height"] = cursor.second.customHeight;
+        object["hotspot_x"] = cursor.second.customHotspotX;
+        object["hotspot_y"] = cursor.second.customHotspotY;
+        return object;
+    }
+
+    json SerialisePreview(CursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["raw_bits"] = cursor.second.preview.bits;
+        object["raw_width"] = cursor.second.preview.width;
+        object["raw_height"] = cursor.second.preview.height;
+        return object;
+    }
+
+    void QueuePreviews()
+    {
+        for (auto& cursor : Cursors)
+        {
+            aQueuedPreview.push_back(&cursor.second.preview);
+        }
+    }
 
 } // namespace Settings
