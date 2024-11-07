@@ -24,10 +24,6 @@ void AddonOptions();
 static void GetProcessPointers();
 static bool isSetProcessPointers = false;
 
-/// FIXME: temporary hack
-static Hash _UID = 0;
-static bool _ConfigModeEnabled = false;
-
 /*******************************************************************************
  * HOOK :: SetCursor
  ******************************************************************************/
@@ -57,8 +53,6 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
                 /* queue bits for resource creation */
                 aQueuedPreview.push_back(&it->second.preview);
             }
-
-            _UID = key;	/** FIXME: temporary hack */
         }
         else
         {
@@ -238,26 +232,8 @@ void AddonRender()
     static bool isHookedSetCursor = false;
     static bool isHookedSetClassLongPtrA = false;
     static bool isHookedSetClassLongPtrW = false;
-    
-    /// FIXME: temporary hack
-    static bool isHooked = false;
 
-    // render configuration mode tooltip
-    if (_ConfigModeEnabled)
-    {
-        if (ImGui::Begin("Timeout", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs))
-        {
-            POINT CursorPos;
-            GetCursorPos(&CursorPos);
-            ImGui::SetWindowPos(ImVec2(static_cast<float32_t>(CursorPos.x + 42), static_cast<float32_t>(CursorPos.y)));
-            std::stringstream ss;
-            ss << "UID: " << std::to_string(_UID);
-            ImGui::Text(ss.str().c_str());
-        }
-        ImGui::End();
-    }
-
-    if (!isHooked && isSetProcessPointers)
+    if (isSetProcessPointers)
     {
         if (!isHookedSetCursor)
         {
@@ -294,20 +270,15 @@ void AddonRender()
         }
         if (isHookedSetCursor && isHookedSetClassLongPtrA && isHookedSetClassLongPtrW)
         {
-            /// FIXME: temporary hack
-            /// TODO: split into separate Renderer functions
-            isHooked = true;
-            // std::thread([]() {
-            // 	APIDefs->Renderer.Deregister(AddonRender);
-            // }).detach();
+            std::thread([]() {
+                APIDefs->Renderer.Deregister(AddonRender);
+            }).detach();
         }
     }
 }
 
 void AddonOptions()
 {
-    ImGui::Checkbox("Configuration Mode", &_ConfigModeEnabled);
-
     ImGui::BeginTable("Cursors", 8, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
     {
         static const float windowPadding = 24;
