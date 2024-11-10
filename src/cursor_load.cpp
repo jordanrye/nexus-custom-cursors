@@ -7,10 +7,11 @@
 #include <string>
 
 static bool IsFileType(const std::string& str, const std::string& ext);
+static std::string GetFilePath(std::string path);
 
 void LoadCustomCursor(CursorPair& cursor)
 {
-    std::string filepath = std::filesystem::path(cursor.second.customFilePath).string();
+    std::string filepath = GetFilePath(cursor.second.customFilePath);
 
     if (!filepath.empty())
     {
@@ -54,4 +55,10 @@ void LoadCustomCursor(CursorPair& cursor)
 static bool IsFileType(const std::string& file, const std::string& ext)
 {
     return file.compare(file.size() - ext.size(), ext.size(), ext) == 0;
+}
+
+static std::string GetFilePath(std::string path)
+{
+    std::filesystem::path filepath = path;
+    return (filepath.is_relative() ? (GameDir / filepath) : filepath).string();
 }

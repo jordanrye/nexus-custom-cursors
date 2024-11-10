@@ -364,6 +364,7 @@ void AddonOptions()
 
                     if (GetOpenFileName(&ofn) == TRUE)
                     {
+                        cursor.second = CursorProperties();
                         cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
                         LoadCustomCursor(cursor);
                         Settings::Save();
@@ -380,6 +381,10 @@ void AddonOptions()
                 ImGui::PushItemWidth(inputWidth);
                 if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
                 {
+                    if (cursor.second.customWidth < 1)
+                    {
+                        cursor.second.customWidth = 1;
+                    }
                     LoadCustomCursor(cursor);
                     Settings::Save();
                 }
@@ -391,6 +396,10 @@ void AddonOptions()
                 ImGui::PushItemWidth(inputWidth);
                 if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
                 {
+                    if (cursor.second.customHeight < 1)
+                    {
+                        cursor.second.customHeight = 1;
+                    }
                     LoadCustomCursor(cursor);
                     Settings::Save();
                 }
@@ -404,6 +413,10 @@ void AddonOptions()
                     ImGui::PushItemWidth(inputWidth);
                     if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
                     {
+                        if (cursor.second.customHotspotX < 1)
+                        {
+                            cursor.second.customHotspotX = 1;
+                        }
                         LoadCustomCursor(cursor);
                         Settings::Save();
                     }
@@ -415,6 +428,10 @@ void AddonOptions()
                     ImGui::PushItemWidth(inputWidth);
                     if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
                     {
+                        if (cursor.second.customHotspotY < 1)
+                        {
+                            cursor.second.customHotspotY = 1;
+                        }
                         LoadCustomCursor(cursor);
                         Settings::Save();
                     }
