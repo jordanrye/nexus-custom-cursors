@@ -40,26 +40,26 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 
         if (it != Cursors.end())
         {
-            /* update cursor */
+            /* set custom cursor */
             hCustomCursor = it->second.customCursor;
 
-            if (it->second.preview.bits.empty())
+            if (it->second.defaultPreview.bits.empty())
             {
                 /* get bits for default cursor */
-                GetBitsFromCursor(hCursor, it->second.preview.width, it->second.preview.height, it->second.preview.bits);
+                GetBitsFromCursor(hCursor, it->second.defaultPreview.width, it->second.defaultPreview.height, it->second.defaultPreview.bits);
             }
-            if (it->second.preview.resource == nullptr)
+            if (it->second.defaultPreview.resource == nullptr)
             {
                 /* queue bits for resource creation */
-                aQueuedPreview.push_back(&it->second.preview);
+                aQueuedPreview.push_back(&it->second.defaultPreview);
             }
         }
         else
         {
             /* key does not exist */
             CursorProperties properties{};
-            GetBitsFromCursor(hCursor, properties.preview.width, properties.preview.height, properties.preview.bits);
-            aQueuedPreview.push_back(&properties.preview);
+            GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits);
+            aQueuedPreview.push_back(&properties.defaultPreview);
             Cursors[key] = properties;
         }
     }
@@ -178,7 +178,7 @@ void AddonLoad(AddonAPI* aApi)
     Settings::LoadPreviews(APIDefs->Paths.GetAddonDirectory("CustomCursors/previews.json"));
     for (auto& cursor : Cursors)
     {
-        aQueuedPreview.push_back(&cursor.second.preview);
+        aQueuedPreview.push_back(&cursor.second.defaultPreview);
     }
 }
 
@@ -282,26 +282,64 @@ void AddonOptions()
     ImGui::BeginTable("Cursors", 8, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
     {
         static const float windowPadding = 24;
-        float inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 9;
+        float inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 7;
 
         ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0); ImGui::Text("UID");
-        ImGui::TableSetColumnIndex(1); ImGui::Text("Filepath");
-        ImGui::TableSetColumnIndex(2); ImGui::Text("Width");
-        ImGui::TableSetColumnIndex(3); ImGui::Text("Height");
-        ImGui::TableSetColumnIndex(4); ImGui::Text("Hotspot X");
-        ImGui::TableSetColumnIndex(5); ImGui::Text("Hotspot Y");
+        ImGui::TableSetColumnIndex(1); ImGui::Text("UID");
+        ImGui::TableSetColumnIndex(2); ImGui::Text("Filepath");
+        ImGui::TableSetColumnIndex(3); ImGui::Text("Width");
+        ImGui::TableSetColumnIndex(4); ImGui::Text("Height");
+        ImGui::TableSetColumnIndex(5); ImGui::Text("Hotspot X");
+        ImGui::TableSetColumnIndex(6); ImGui::Text("Hotspot Y");
 
         for (auto& cursor : Cursors)
         {
             ImGui::TableNextRow();
 
-            //("Cursor##" + std::to_string(cursor.first)).c_str()
-        
             ImGui::TableSetColumnIndex(0);
+            auto resource = cursor.second.customPreview.resource ? cursor.second.customPreview.resource : cursor.second.defaultPreview.resource;
+            if (resource != nullptr)
+            {
+                ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
+
+                if (ImGui::IsItemHovered())
+                {
+                    if (ImGui::Tooltip())
+                    {
+                        ImGui::BeginTable("PreviewTooltip", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner);
+                        {
+                            ImGui::TableNextColumn();
+                            ImGui::Text("Default");
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("Custom");
+
+                            ImGui::TableNextRow();
+
+                            ImGui::TableNextColumn();
+                            if (cursor.second.defaultPreview.resource != nullptr)
+                            {
+                                ImGui::Image(cursor.second.defaultPreview.resource, ImVec2(cursor.second.defaultPreview.width, cursor.second.defaultPreview.height));
+                            }
+
+                            ImGui::TableNextColumn();
+                            if (cursor.second.customPreview.resource != nullptr)
+                            {
+                                ImGui::Image(cursor.second.customPreview.resource, ImVec2(cursor.second.customPreview.width, cursor.second.customPreview.height));
+                            }
+
+                            ImGui::EndTable();
+                        }
+
+                        ImGui::EndTooltip();
+                    }
+                }
+            }
+        
+            ImGui::TableSetColumnIndex(1);
             ImGui::PaddedText(std::to_string(cursor.first).c_str(), 0.0F, 2.0F);
 
-            ImGui::TableSetColumnIndex(1);
+            ImGui::TableSetColumnIndex(2);
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
             ImGui::PushItemWidth(inputWidth * 2);
             if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
@@ -335,7 +373,7 @@ void AddonOptions()
 
             if (cursor.second.customFilePath != "")
             {
-                ImGui::TableSetColumnIndex(2);
+                ImGui::TableSetColumnIndex(3);
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
                 ImGui::PushItemWidth(inputWidth);
                 if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
@@ -346,7 +384,7 @@ void AddonOptions()
                 ImGui::PopItemWidth();
                 ImGui::PopStyleVar();
 
-                ImGui::TableSetColumnIndex(3);
+                ImGui::TableSetColumnIndex(4);
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
                 ImGui::PushItemWidth(inputWidth);
                 if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
@@ -359,7 +397,7 @@ void AddonOptions()
 
                 if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
                 {
-                    ImGui::TableSetColumnIndex(4);
+                    ImGui::TableSetColumnIndex(5);
                     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
                     ImGui::PushItemWidth(inputWidth);
                     if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
@@ -370,7 +408,7 @@ void AddonOptions()
                     ImGui::PopItemWidth();
                     ImGui::PopStyleVar();
 
-                    ImGui::TableSetColumnIndex(5);
+                    ImGui::TableSetColumnIndex(6);
                     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
                     ImGui::PushItemWidth(inputWidth);
                     if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
@@ -382,7 +420,7 @@ void AddonOptions()
                     ImGui::PopStyleVar();
                 }
 
-                ImGui::TableSetColumnIndex(6);
+                ImGui::TableSetColumnIndex(7);
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0, 2.0));
                 if (ImGui::Button(("x##Remove" + std::to_string(cursor.first)).c_str()))
                 {
@@ -390,13 +428,6 @@ void AddonOptions()
                     Settings::Save();
                 }
                 ImGui::PopStyleVar();
-            }
-
-            ImGui::TableSetColumnIndex(7);
-            auto resource = cursor.second.preview.resource;
-            if (resource != nullptr)
-            {
-                ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
             }
         }
 

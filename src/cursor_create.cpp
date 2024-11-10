@@ -5,21 +5,18 @@
 #include "stb/stb_image.h"
 #include "stb/stb_image_resize2.h"
 
-static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY);
-
-HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY)
-{
-    return static_cast<HCURSOR>(CreateIconFromPNG(filename, width, height, hotspotX, hotspotY));
-}
-
-static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32_t height, int32_t hotspotX, int32_t hotspotY)
+HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t& width, int32_t& height, int32_t& hotspotX, int32_t& hotspotY)
 {
     static const int32_t STBI_RGBA = 4;
-    HICON hIcon = nullptr;
+    HCURSOR hCursor = nullptr;
 
     /* attempt to load image from file */
     int32_t imageWidth, imageHeight, imageChannels;
     stbi_uc* pixels = stbi_load(filename.c_str(), &imageWidth, &imageHeight, &imageChannels, STBI_RGBA);
+
+    /* get default cursor size if none provided */
+    width = (width == 0) ? imageWidth : width;
+    height = (height == 0) ? imageHeight : height;
 
     if (pixels != nullptr)
     {
@@ -77,7 +74,7 @@ static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32
                     iconInfo.hbmColor = colour;
 
                     /* create icon */
-                    hIcon = CreateIconIndirect(&iconInfo);
+                    hCursor = static_cast<HCURSOR>(CreateIconIndirect(&iconInfo));
 
                     /* clean-up */
                     DeleteObject(mask);
@@ -108,5 +105,27 @@ static HICON CreateIconFromPNG(const std::string& filename, int32_t width, int32
         APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load image.");
     }
 
-    return hIcon;
+    return hCursor;
+}
+
+HCURSOR CreateCursorFromCUR(const std::string& filename, int32_t& width, int32_t& height)
+{
+    HCURSOR hCursor = static_cast<HCURSOR>(LoadImage(NULL, filename.c_str(), IMAGE_CURSOR, width, height, LR_LOADFROMFILE));
+
+    /* get default cursor size if none provided */
+    if ((width == 0) && (height == 0))
+    {
+        ICONINFO iconInfo{};
+        if (GetIconInfo(hCursor, &iconInfo))
+        {
+            BITMAP bitmap{};
+            if (GetObject(iconInfo.hbmMask, sizeof(BITMAP), &bitmap))
+            {
+                width = bitmap.bmWidth;
+                height = bitmap.bmHeight;
+            }
+        }
+    }
+
+    return hCursor;
 }

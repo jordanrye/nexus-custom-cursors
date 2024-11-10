@@ -27,7 +27,8 @@ struct CursorPreview {
 
 struct CursorProperties {
     HCURSOR customCursor;
-    CursorPreview preview;
+    CursorPreview customPreview;
+    CursorPreview defaultPreview;
     std::string customFilePath;
     E_FILE_FORMAT customFileFormat;
     int32_t customWidth;

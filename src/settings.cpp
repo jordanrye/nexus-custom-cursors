@@ -105,13 +105,13 @@ namespace Settings
                 for (auto &cursor : object["cursors"])
                 {
                     Hash key = 0;
-                    cursor["cursor_id"].get_to(key);
-                    cursor["file_path"].get_to(Cursors[key].customFilePath);
-                    cursor["file_format"].get_to(Cursors[key].customFileFormat);
-                    cursor["width"].get_to(Cursors[key].customWidth);
-                    cursor["height"].get_to(Cursors[key].customHeight);
-                    cursor["hotspot_x"].get_to(Cursors[key].customHotspotX);
-                    cursor["hotspot_y"].get_to(Cursors[key].customHotspotY);
+                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
+                    if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(Cursors[key].customFilePath); }
+                    if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(Cursors[key].customFileFormat); }
+                    if (!cursor["width"].is_null()) { cursor["width"].get_to(Cursors[key].customWidth); }
+                    if (!cursor["height"].is_null()) { cursor["height"].get_to(Cursors[key].customHeight); }
+                    if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(Cursors[key].customHotspotX); }
+                    if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(Cursors[key].customHotspotY); }
                 }
             }
         }
@@ -126,10 +126,13 @@ namespace Settings
                 for (auto &cursor : object["cursors"])
                 {
                     Hash key = 0;
-                    cursor["cursor_id"].get_to(key);
-                    cursor["raw_bits"].get_to(Cursors[key].preview.bits);
-                    cursor["raw_width"].get_to(Cursors[key].preview.width);
-                    cursor["raw_height"].get_to(Cursors[key].preview.height);
+                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
+                    if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(Cursors[key].customPreview.bits); }
+                    if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(Cursors[key].customPreview.width); }
+                    if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(Cursors[key].customPreview.height); }
+                    if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(Cursors[key].defaultPreview.bits); }
+                    if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(Cursors[key].defaultPreview.width); }
+                    if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(Cursors[key].defaultPreview.height); }
                 }
             }
         }
@@ -160,9 +163,12 @@ namespace Settings
     {
         json object{};
         object["cursor_id"] = cursor.first;
-        object["raw_bits"] = cursor.second.preview.bits;
-        object["raw_width"] = cursor.second.preview.width;
-        object["raw_height"] = cursor.second.preview.height;
+        object["custom_bits"] = cursor.second.customPreview.bits;
+        object["custom_width"] = cursor.second.customPreview.width;
+        object["custom_height"] = cursor.second.customPreview.height;
+        object["default_bits"] = cursor.second.defaultPreview.bits;
+        object["default_width"] = cursor.second.defaultPreview.width;
+        object["default_height"] = cursor.second.defaultPreview.height;
         return object;
     }
 
@@ -170,7 +176,8 @@ namespace Settings
     {
         for (auto& cursor : Cursors)
         {
-            aQueuedPreview.push_back(&cursor.second.preview);
+            aQueuedPreview.push_back(&cursor.second.customPreview);
+            aQueuedPreview.push_back(&cursor.second.defaultPreview);
         }
     }
 

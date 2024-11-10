@@ -1,6 +1,7 @@
 #include "cursor_load.h"
 
 #include "cursor_create.h"
+#include "cursor_preview.h"
 #include "shared.h"
 
 #include <string>
@@ -11,34 +12,39 @@ void LoadCustomCursor(CursorPair& cursor)
 {
     std::string filename = IconsDir.string() + cursor.second.customFilePath;
 
+    /* create cursor */
     if (IsFileType(filename, ".png"))
     {
         cursor.second.customCursor = CreateCursorFromPNG(
-            filename, 
-            cursor.second.customWidth, 
-            cursor.second.customHeight, 
-            cursor.second.customHotspotX, 
+            filename,
+            cursor.second.customWidth,
+            cursor.second.customHeight,
+            cursor.second.customHotspotX,
             cursor.second.customHotspotY
         );
         cursor.second.customFileFormat = E_FILE_FORMAT_PNG;
     }
     else if (IsFileType(filename, ".cur") || IsFileType(filename, ".ani"))
     {
-        HANDLE hImage = LoadImage(
-            NULL,
-            filename.c_str(),
-            IMAGE_CURSOR,
+        cursor.second.customCursor = CreateCursorFromCUR(
+            filename,
             cursor.second.customWidth,
-            cursor.second.customHeight,
-            LR_LOADFROMFILE
+            cursor.second.customHeight
         );
-        cursor.second.customCursor = static_cast<HCURSOR>(hImage);
         cursor.second.customFileFormat = E_FILE_FORMAT_CUR;
     }
     else
     {
+        cursor.second.customCursor = nullptr;
+        cursor.second.customFileFormat = E_FILE_FORMAT_INV;
         APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load custom cursor (unsupported file type).");
-        cursor.second.customCursor = NULL;
+    }
+
+    /* create preview */
+    if (cursor.second.customCursor != nullptr)
+    {
+        GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits);
+        aQueuedPreview.push_back(&cursor.second.customPreview);
     }
 }
 

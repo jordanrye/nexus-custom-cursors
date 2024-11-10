@@ -105,9 +105,9 @@ void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, con
 
             /* create resource */
             D3D11Device->CreateShaderResourceView(pTexture, &rsrcDesc, ppResource);
+        
+            /* clean-up */
+            pTexture->Release();
         }
-
-        /* clean-up */
-        pTexture->Release();
     }
 }
