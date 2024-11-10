@@ -11,6 +11,7 @@ HMODULE hSelf = nullptr;
 HWND hClient = nullptr;
 ID3D11Device* D3D11Device = nullptr;
 
+std::filesystem::path GameDir{};
 std::filesystem::path AddonDir{};
 std::filesystem::path IconsDir{};
 

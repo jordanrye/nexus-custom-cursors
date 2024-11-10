@@ -17,6 +17,7 @@ extern HMODULE hSelf;
 extern HWND hClient;
 extern ID3D11Device* D3D11Device;
 
+extern std::filesystem::path GameDir;
 extern std::filesystem::path AddonDir;
 extern std::filesystem::path IconsDir;
 

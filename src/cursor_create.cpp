@@ -5,14 +5,14 @@
 #include "stb/stb_image.h"
 #include "stb/stb_image_resize2.h"
 
-HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t& width, int32_t& height, int32_t& hotspotX, int32_t& hotspotY)
+HCURSOR CreateCursorFromPNG(const std::string& filepath, int32_t& width, int32_t& height, int32_t& hotspotX, int32_t& hotspotY)
 {
     static const int32_t STBI_RGBA = 4;
     HCURSOR hCursor = nullptr;
 
     /* attempt to load image from file */
     int32_t imageWidth, imageHeight, imageChannels;
-    stbi_uc* pixels = stbi_load(filename.c_str(), &imageWidth, &imageHeight, &imageChannels, STBI_RGBA);
+    stbi_uc* pixels = stbi_load(filepath.c_str(), &imageWidth, &imageHeight, &imageChannels, STBI_RGBA);
 
     /* get default cursor size if none provided */
     width = (width == 0) ? imageWidth : width;
@@ -108,9 +108,9 @@ HCURSOR CreateCursorFromPNG(const std::string& filename, int32_t& width, int32_t
     return hCursor;
 }
 
-HCURSOR CreateCursorFromCUR(const std::string& filename, int32_t& width, int32_t& height)
+HCURSOR CreateCursorFromCUR(const std::string& filepath, int32_t& width, int32_t& height)
 {
-    HCURSOR hCursor = static_cast<HCURSOR>(LoadImage(NULL, filename.c_str(), IMAGE_CURSOR, width, height, LR_LOADFROMFILE));
+    HCURSOR hCursor = static_cast<HCURSOR>(LoadImage(NULL, filepath.c_str(), IMAGE_CURSOR, width, height, LR_LOADFROMFILE));
 
     /* get default cursor size if none provided */
     if ((width == 0) && (height == 0))

@@ -3,6 +3,7 @@
 #include "cursor_preview.h"
 #include "settings.h"
 #include "shared.h"
+#include "utilities.h"
 #include "version.h"
 
 #include "nexus/Nexus.h"
@@ -167,6 +168,7 @@ void AddonLoad(AddonAPI* aApi)
     APIDefs->Renderer.Register(ERenderType_Render, AddonRender);
     APIDefs->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
 
+    GameDir = APIDefs->Paths.GetGameDirectory();
     AddonDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/");
     IconsDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/cursors/");
 
@@ -344,10 +346,10 @@ void AddonOptions()
             ImGui::PushItemWidth(inputWidth * 2);
             if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
             {
-                std::thread([&cursor]{
-                    OPENFILENAME ofn = { 0 };
-                    TCHAR szFile[MAX_PATH] = { 0 };
-                    TCHAR initialDir[MAX_PATH] = { 0 };
+                std::thread([&cursor] {
+                    OPENFILENAME ofn{};
+                    TCHAR szFile[MAX_PATH]{};
+                    TCHAR initialDir[MAX_PATH]{};
 
                     strcpy_s(initialDir, IconsDir.string().c_str());
 
@@ -362,7 +364,7 @@ void AddonOptions()
 
                     if (GetOpenFileName(&ofn) == TRUE)
                     {
-                        cursor.second.customFilePath = std::string(ofn.lpstrFile).substr(IconsDir.string().length());
+                        cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
                         LoadCustomCursor(cursor);
                         Settings::Save();
                     }

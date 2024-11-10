@@ -10,45 +10,48 @@ static bool IsFileType(const std::string& str, const std::string& ext);
 
 void LoadCustomCursor(CursorPair& cursor)
 {
-    std::string filename = IconsDir.string() + cursor.second.customFilePath;
+    std::string filepath = std::filesystem::path(cursor.second.customFilePath).string();
 
-    /* create cursor */
-    if (IsFileType(filename, ".png"))
+    if (!filepath.empty())
     {
-        cursor.second.customCursor = CreateCursorFromPNG(
-            filename,
-            cursor.second.customWidth,
-            cursor.second.customHeight,
-            cursor.second.customHotspotX,
-            cursor.second.customHotspotY
-        );
-        cursor.second.customFileFormat = E_FILE_FORMAT_PNG;
-    }
-    else if (IsFileType(filename, ".cur") || IsFileType(filename, ".ani"))
-    {
-        cursor.second.customCursor = CreateCursorFromCUR(
-            filename,
-            cursor.second.customWidth,
-            cursor.second.customHeight
-        );
-        cursor.second.customFileFormat = E_FILE_FORMAT_CUR;
-    }
-    else
-    {
-        cursor.second.customCursor = nullptr;
-        cursor.second.customFileFormat = E_FILE_FORMAT_INV;
-        APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load custom cursor (unsupported file type).");
-    }
+        /* create cursor */
+        if (IsFileType(filepath, ".png"))
+        {
+            cursor.second.customCursor = CreateCursorFromPNG(
+                filepath,
+                cursor.second.customWidth,
+                cursor.second.customHeight,
+                cursor.second.customHotspotX,
+                cursor.second.customHotspotY
+            );
+            cursor.second.customFileFormat = E_FILE_FORMAT_PNG;
+        }
+        else if (IsFileType(filepath, ".cur") || IsFileType(filepath, ".ani"))
+        {
+            cursor.second.customCursor = CreateCursorFromCUR(
+                filepath,
+                cursor.second.customWidth,
+                cursor.second.customHeight
+            );
+            cursor.second.customFileFormat = E_FILE_FORMAT_CUR;
+        }
+        else
+        {
+            cursor.second.customCursor = nullptr;
+            cursor.second.customFileFormat = E_FILE_FORMAT_INV;
+            APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load custom cursor (unsupported file type).");
+        }
 
-    /* create preview */
-    if (cursor.second.customCursor != nullptr)
-    {
-        GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits);
-        aQueuedPreview.push_back(&cursor.second.customPreview);
+        /* create preview */
+        if (cursor.second.customCursor != nullptr)
+        {
+            GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits);
+            aQueuedPreview.push_back(&cursor.second.customPreview);
+        }
     }
 }
 
-static bool IsFileType(const std::string& str, const std::string& ext)
+static bool IsFileType(const std::string& file, const std::string& ext)
 {
-    return str.compare(str.size() - ext.size(), ext.size(), ext) == 0;
+    return file.compare(file.size() - ext.size(), ext.size(), ext) == 0;
 }
