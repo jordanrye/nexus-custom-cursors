@@ -38,31 +38,28 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
     if (key != HASH_INVALID)
     {
         auto it = Cursors.find(key);
-
         if (it != Cursors.end())
         {
-            /* set custom cursor */
+            /* set cursor to custom */
             hCustomCursor = it->second.customCursor;
 
-            if (it->second.defaultPreview.bits.empty())
+            if (it->second.defaultPreview.bits.empty() || !it->second.defaultPreview.resource)
             {
-                /* get bits for default cursor */
-                GetBitsFromCursor(hCursor, it->second.defaultPreview.width, it->second.defaultPreview.height, it->second.defaultPreview.bits);
-            }
-            if (it->second.defaultPreview.resource == nullptr)
-            {
-                /* queue bits for resource creation */
-                aQueuedPreview.push_back(&it->second.defaultPreview);
+                /* get preview for default cursor */
+                GetCursorPreview(hCursor, it->second);
             }
         }
         else
         {
             /* key does not exist */
-            CursorProperties properties{};
-            GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits);
-            aQueuedPreview.push_back(&properties.defaultPreview);
-            Cursors[key] = properties;
+            Cursors.insert(CursorPair(key, CursorProperties()));
+            GetCursorPreview(hCursor, Cursors[key]);
         }
+    }
+    else
+    {
+        /* set cursor to default */
+        hCustomCursor = hCursor;
     }
 
     if (hCustomCursor != NULL)
@@ -175,13 +172,8 @@ void AddonLoad(AddonAPI* aApi)
     std::filesystem::create_directory(AddonDir);
     std::filesystem::create_directory(IconsDir);
 
-    /* load cursors and queue previews for render */
     Settings::LoadSettings(APIDefs->Paths.GetAddonDirectory("CustomCursors/settings.json"));
     Settings::LoadPreviews(APIDefs->Paths.GetAddonDirectory("CustomCursors/previews.json"));
-    for (auto& cursor : Cursors)
-    {
-        aQueuedPreview.push_back(&cursor.second.defaultPreview);
-    }
 }
 
 void AddonUnload()
@@ -224,7 +216,10 @@ void AddonRenderPreview()
     while (aQueuedPreview.size() > 0)
     {
         auto preview = aQueuedPreview.front();
-        CreateResourceFromBits(preview->width, preview->height, preview->bits, &(preview->resource));
+        if (preview != nullptr)
+        {
+            CreateResourceFromBits(preview->width, preview->height, preview->bits, &(preview->resource));
+        }
         aQueuedPreview.erase(aQueuedPreview.begin());
     }
 }
@@ -478,4 +473,12 @@ static void GetProcessPointers()
             isSetProcessPointers = true;
         }
     } while (!isSetProcessPointers);
+}
+
+static void GetCursorPreview(HCURSOR hCursor, CursorProperties& properties)
+{
+    if (GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits));
+    {
+        aQueuedPreview.push_back(&properties.defaultPreview);
+    }
 }

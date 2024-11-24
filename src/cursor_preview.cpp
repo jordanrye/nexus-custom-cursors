@@ -7,8 +7,9 @@
 #include <Windows.h>
 #include <d3d11.h>
 
-void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits)
+bool GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits)
 {
+    bool success = false;
     ICONINFO iconInfo{};
 
     if (GetIconInfo(hCursor, &iconInfo))
@@ -64,8 +65,12 @@ void GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std
             if (iconInfo.hbmColor != nullptr) { DeleteObject(iconInfo.hbmColor); }
             ReleaseDC(NULL, hDC_Screen);
             DeleteDC(hDC_Bitmap);
+
+            success = true;
         }
     }
+
+    return success;
 }
 
 void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, const std::vector<uint32_t>& pBits, ID3D11ShaderResourceView** ppResource)

@@ -46,8 +46,10 @@ void LoadCustomCursor(CursorPair& cursor)
         /* create preview */
         if (cursor.second.customCursor != nullptr)
         {
-            GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits);
-            aQueuedPreview.push_back(&cursor.second.customPreview);
+            if (GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits))
+            {
+                aQueuedPreview.push_back(&cursor.second.customPreview);
+            }
         }
     }
 }
