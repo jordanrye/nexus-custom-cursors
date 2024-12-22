@@ -22,8 +22,10 @@ void AddonRenderPreview();
 void AddonRender();
 void AddonOptions();
 
-static void GetProcessPointers();
 static bool isSetProcessPointers = false;
+
+static void GetProcessPointers();
+static void GetCursorPreview(HCURSOR hCursor, CursorProperties& properties);
 
 /*******************************************************************************
  * HOOK :: SetCursor
@@ -34,8 +36,17 @@ SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 {
     uint32_t key = GetCursorHash(hCursor);
+    auto& io = ImGui::GetIO();
 
-    if (key != HASH_INVALID)
+    if (MumbleLink->Context.IsInCombat && CombatCursor.second.customCursor)
+    {
+        hCustomCursor = CombatCursor.second.customCursor;
+    }
+    else if (io.WantCaptureMouse && NexusCursor.second.customCursor)
+    {
+        hCustomCursor = NexusCursor.second.customCursor;
+    }
+    else if (key != HASH_INVALID)
     {
         auto it = Cursors.find(key);
         if (it != Cursors.end())
@@ -158,6 +169,10 @@ void AddonLoad(AddonAPI* aApi)
     APIDefs->Events.Subscribe("EV_MUMBLE_IDENTITY_UPDATED", OnMumbleIdentityUpdated);
 
     ((IDXGISwapChain*)APIDefs->SwapChain)->GetDevice(__uuidof(ID3D11Device), (void**)&D3D11Device);
+    
+    DXGI_SWAP_CHAIN_DESC desc{};
+    ((IDXGISwapChain*)APIDefs->SwapChain)->GetDesc(&desc);
+    hClient = desc.OutputWindow;
 
     GetProcessPointers();
 
@@ -167,13 +182,15 @@ void AddonLoad(AddonAPI* aApi)
 
     GameDir = APIDefs->Paths.GetGameDirectory();
     AddonDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/");
+    CacheDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/appcache/");
     IconsDir = APIDefs->Paths.GetAddonDirectory("CustomCursors/cursors/");
 
     std::filesystem::create_directory(AddonDir);
+    std::filesystem::create_directory(CacheDir);
     std::filesystem::create_directory(IconsDir);
 
     Settings::LoadSettings(APIDefs->Paths.GetAddonDirectory("CustomCursors/settings.json"));
-    Settings::LoadPreviews(APIDefs->Paths.GetAddonDirectory("CustomCursors/previews.json"));
+    Settings::LoadPreviews(APIDefs->Paths.GetAddonDirectory("CustomCursors/appcache/previews.json"));
 }
 
 void AddonUnload()
@@ -274,179 +291,232 @@ void AddonRender()
     }
 }
 
+void RowHeader(std::string c1, std::string c2, std::string c3, std::string c4, std::string c5, std::string c6);
+void RowCursor(std::string identifier, CursorPair& cursor, float32_t& inputWidth);
+void ColumnPreview(CursorPair& cursor);
+void ColumnIdentifier(std::string identifier);
+void ColumnFilepath(float32_t& inputWidth, CursorPair& cursor);
+void ColumnWidth(float32_t& inputWidth, CursorPair& cursor);
+void ColumnHeight(float32_t& inputWidth, CursorPair& cursor);
+void ColumnHotspotX(float32_t& inputWidth, CursorPair& cursor);
+void ColumnHotspotY(float32_t& inputWidth, CursorPair& cursor);
+void ColumnRemove(CursorPair& cursor);
+
 void AddonOptions()
 {
+    static const float32_t windowPadding = 24;
+    float32_t inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 7;
+    
     ImGui::BeginTable("Cursors", 8, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
     {
-        static const float windowPadding = 24;
-        float inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 7;
-
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(1); ImGui::Text("UID");
-        ImGui::TableSetColumnIndex(2); ImGui::Text("Filepath");
-        ImGui::TableSetColumnIndex(3); ImGui::Text("Width");
-        ImGui::TableSetColumnIndex(4); ImGui::Text("Height");
-        ImGui::TableSetColumnIndex(5); ImGui::Text("Hotspot X");
-        ImGui::TableSetColumnIndex(6); ImGui::Text("Hotspot Y");
-
+        RowHeader("UID", "Filepath", "Width", "Height", "Hotspot X", "Hotspot Y");
+        RowCursor("Combat", CombatCursor, inputWidth);
+        RowCursor("Nexus", NexusCursor, inputWidth);
         for (auto& cursor : Cursors)
         {
-            ImGui::TableNextRow();
-
-            ImGui::TableSetColumnIndex(0);
-            auto resource = cursor.second.customPreview.resource ? cursor.second.customPreview.resource : cursor.second.defaultPreview.resource;
-            if (resource != nullptr)
-            {
-                ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
-
-                if (ImGui::IsItemHovered())
-                {
-                    if (ImGui::Tooltip())
-                    {
-                        ImGui::BeginTable("PreviewTooltip", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner);
-                        {
-                            ImGui::TableNextColumn();
-                            ImGui::Text("Default");
-
-                            ImGui::TableNextColumn();
-                            ImGui::Text("Custom");
-
-                            ImGui::TableNextRow();
-
-                            ImGui::TableNextColumn();
-                            if (cursor.second.defaultPreview.resource != nullptr)
-                            {
-                                ImGui::Image(cursor.second.defaultPreview.resource, ImVec2(cursor.second.defaultPreview.width, cursor.second.defaultPreview.height));
-                            }
-
-                            ImGui::TableNextColumn();
-                            if (cursor.second.customPreview.resource != nullptr)
-                            {
-                                ImGui::Image(cursor.second.customPreview.resource, ImVec2(cursor.second.customPreview.width, cursor.second.customPreview.height));
-                            }
-
-                            ImGui::EndTable();
-                        }
-
-                        ImGui::EndTooltip();
-                    }
-                }
-            }
-        
-            ImGui::TableSetColumnIndex(1);
-            ImGui::PaddedText(std::to_string(cursor.first).c_str(), 0.0F, 2.0F);
-
-            ImGui::TableSetColumnIndex(2);
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-            ImGui::PushItemWidth(inputWidth * 2);
-            if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
-            {
-                std::thread([&cursor] {
-                    OPENFILENAME ofn{};
-                    TCHAR szFile[MAX_PATH]{};
-                    TCHAR initialDir[MAX_PATH]{};
-
-                    strcpy_s(initialDir, IconsDir.string().c_str());
-
-                    ofn.lStructSize = sizeof(ofn);
-                    ofn.hwndOwner = static_cast<HWND>(nullptr);
-                    ofn.lpstrFile = szFile;
-                    ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
-                    ofn.nFilterIndex = 2;
-                    ofn.lpstrInitialDir = initialDir;
-                    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-                    if (GetOpenFileName(&ofn) == TRUE)
-                    {
-                        cursor.second = CursorProperties();
-                        cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
-                        LoadCustomCursor(cursor);
-                        Settings::Save();
-                    }
-                }).detach();
-            }
-            ImGui::PopItemWidth();
-            ImGui::PopStyleVar();
-
-            if (cursor.second.customFilePath != "")
-            {
-                ImGui::TableSetColumnIndex(3);
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-                ImGui::PushItemWidth(inputWidth);
-                if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
-                {
-                    if (cursor.second.customWidth < 1)
-                    {
-                        cursor.second.customWidth = 1;
-                    }
-                    LoadCustomCursor(cursor);
-                    Settings::Save();
-                }
-                ImGui::PopItemWidth();
-                ImGui::PopStyleVar();
-
-                ImGui::TableSetColumnIndex(4);
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-                ImGui::PushItemWidth(inputWidth);
-                if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
-                {
-                    if (cursor.second.customHeight < 1)
-                    {
-                        cursor.second.customHeight = 1;
-                    }
-                    LoadCustomCursor(cursor);
-                    Settings::Save();
-                }
-                ImGui::PopItemWidth();
-                ImGui::PopStyleVar();
-
-                if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
-                {
-                    ImGui::TableSetColumnIndex(5);
-                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-                    ImGui::PushItemWidth(inputWidth);
-                    if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
-                    {
-                        if (cursor.second.customHotspotX < 1)
-                        {
-                            cursor.second.customHotspotX = 1;
-                        }
-                        LoadCustomCursor(cursor);
-                        Settings::Save();
-                    }
-                    ImGui::PopItemWidth();
-                    ImGui::PopStyleVar();
-
-                    ImGui::TableSetColumnIndex(6);
-                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-                    ImGui::PushItemWidth(inputWidth);
-                    if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
-                    {
-                        if (cursor.second.customHotspotY < 1)
-                        {
-                            cursor.second.customHotspotY = 1;
-                        }
-                        LoadCustomCursor(cursor);
-                        Settings::Save();
-                    }
-                    ImGui::PopItemWidth();
-                    ImGui::PopStyleVar();
-                }
-
-                ImGui::TableSetColumnIndex(7);
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0, 2.0));
-                if (ImGui::Button(("x##Remove" + std::to_string(cursor.first)).c_str()))
-                {
-                    cursor.second = CursorProperties();
-                    Settings::Save();
-                }
-                ImGui::PopStyleVar();
-            }
+            RowCursor(std::to_string(cursor.first), cursor, inputWidth);
         }
 
         ImGui::EndTable();
     }
+}
+
+void RowHeader(std::string c1, std::string c2, std::string c3, std::string c4, std::string c5, std::string c6)
+{
+    ImGui::TableNextRow();
+    ImGui::TableSetColumnIndex(1); ImGui::Text(c1.c_str()); /* Identifier */
+    ImGui::TableSetColumnIndex(2); ImGui::Text(c2.c_str()); /* Filepath */
+    ImGui::TableSetColumnIndex(3); ImGui::Text(c3.c_str()); /* Width */
+    ImGui::TableSetColumnIndex(4); ImGui::Text(c4.c_str()); /* Height */
+    ImGui::TableSetColumnIndex(5); ImGui::Text(c5.c_str()); /* Hotspot X */
+    ImGui::TableSetColumnIndex(6); ImGui::Text(c6.c_str()); /* Hotspot Y */
+}
+
+void RowCursor(std::string identifier, CursorPair& cursor, float32_t& inputWidth)
+{
+    ImGui::TableNextRow();
+    ImGui::TableSetColumnIndex(0); ColumnPreview(cursor);
+    ImGui::TableSetColumnIndex(1); ColumnIdentifier(identifier);
+    ImGui::TableSetColumnIndex(2); ColumnFilepath(inputWidth, cursor);
+    if (cursor.second.customFilePath != "")
+    {
+        ImGui::TableSetColumnIndex(3); ColumnWidth(inputWidth, cursor);
+        ImGui::TableSetColumnIndex(4); ColumnHeight(inputWidth, cursor);
+
+        if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
+        {
+            ImGui::TableSetColumnIndex(5); ColumnHotspotX(inputWidth, cursor);
+            ImGui::TableSetColumnIndex(6); ColumnHotspotY(inputWidth, cursor);
+        }
+
+        ImGui::TableSetColumnIndex(7); ColumnRemove(cursor);
+    }
+}
+
+void ColumnPreview(CursorPair& cursor)
+{
+    auto resource = cursor.second.customPreview.resource ? cursor.second.customPreview.resource : cursor.second.defaultPreview.resource;
+
+    if (resource != nullptr)
+    {
+        ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
+
+        if (ImGui::IsItemHovered())
+        {
+            if (ImGui::Tooltip())
+            {
+                ImGui::BeginTable("PreviewTooltip", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner);
+                {
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Default");
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Custom");
+
+                    ImGui::TableNextRow();
+
+                    ImGui::TableNextColumn();
+                    if (cursor.second.defaultPreview.resource != nullptr)
+                    {
+                        ImGui::Image(cursor.second.defaultPreview.resource, ImVec2(cursor.second.defaultPreview.width, cursor.second.defaultPreview.height));
+                    }
+
+                    ImGui::TableNextColumn();
+                    if (cursor.second.customPreview.resource != nullptr)
+                    {
+                        ImGui::Image(cursor.second.customPreview.resource, ImVec2(cursor.second.customPreview.width, cursor.second.customPreview.height));
+                    }
+
+                    ImGui::EndTable();
+                }
+
+                ImGui::EndTooltip();
+            }
+        }
+    }
+}
+
+void ColumnIdentifier(std::string identifier)
+{
+    static const float textSize = ImGui::CalcTextSize("WWWWWWWWWW").x;
+
+    ImGui::PushItemWidth(textSize);
+    ImGui::PaddedText(identifier.c_str(), 0.0F, 2.0F);
+    ImGui::PopItemWidth();
+}
+
+void ColumnFilepath(float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+    ImGui::PushItemWidth(inputWidth * 2);
+    if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
+    {
+        std::thread([&cursor] {
+            OPENFILENAME ofn{};
+            TCHAR szFile[MAX_PATH]{};
+            TCHAR initialDir[MAX_PATH]{};
+
+            strcpy_s(initialDir, IconsDir.string().c_str());
+
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = static_cast<HWND>(nullptr);
+            ofn.lpstrFile = szFile;
+            ofn.nMaxFile = sizeof(szFile);
+            ofn.lpstrFilter = "All Files (*.*)\0*.*\0Supported Files (*.png, *.cur, *.ani)\0*.png;*.cur;*.ani\0Portable Network Graphic (*.png)\0*.png\0Windows Cursor File (*.cur)\0*.cur\0Windows Animated Cursor File (*.ani)\0*.ani\0";
+            ofn.nFilterIndex = 2;
+            ofn.lpstrInitialDir = initialDir;
+            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+            if (GetOpenFileName(&ofn) == TRUE)
+            {
+                cursor.second = CursorProperties();
+                cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
+                LoadCustomCursor(cursor.second);
+                Settings::Save();
+            }
+        }).detach();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
+}
+
+void ColumnWidth(float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
+    {
+        if (cursor.second.customWidth < 1)
+        {
+            cursor.second.customWidth = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
+}
+
+void ColumnHeight(float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
+    {
+        if (cursor.second.customHeight < 1)
+        {
+            cursor.second.customHeight = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
+}
+
+void ColumnHotspotX(float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
+    {
+        if (cursor.second.customHotspotX < 1)
+        {
+            cursor.second.customHotspotX = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
+}
+
+void ColumnHotspotY(float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
+    {
+        if (cursor.second.customHotspotY < 1)
+        {
+            cursor.second.customHotspotY = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
+}
+
+void ColumnRemove(CursorPair& cursor)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0, 2.0));
+    if (ImGui::Button(("x##Remove" + std::to_string(cursor.first)).c_str()))
+    {
+        cursor.second = CursorProperties();
+        Settings::Save();
+    }
+    ImGui::PopStyleVar();
 }
 
 static void GetProcessPointers()

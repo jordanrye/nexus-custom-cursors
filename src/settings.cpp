@@ -72,14 +72,23 @@ namespace Settings
 
     void Save()
     {
+        /* cursors */
         Settings["cursors"] = json::array();
         Previews["cursors"] = json::array();
+
+        /* special cursors */
+        Settings["special_cursors"] = json::array();
+        Previews["special_cursors"] = json::array();
 
         for (auto& cursor : Cursors)
         {
             Settings["cursors"].push_back(SerialiseSetting(cursor));
             Previews["cursors"].push_back(SerialisePreview(cursor));
         }
+        Settings["special_cursors"].push_back(SerialiseSetting(CombatCursor));
+        Previews["special_cursors"].push_back(SerialisePreview(CombatCursor));
+        Settings["special_cursors"].push_back(SerialiseSetting(NexusCursor));
+        Previews["special_cursors"].push_back(SerialisePreview(NexusCursor));
 
         Mutex.lock();
         {
@@ -114,6 +123,31 @@ namespace Settings
                     if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(Cursors[key].customHotspotY); }
                 }
             }
+
+            if (!object["special_cursors"].is_null())
+            {
+                for (auto &cursor : object["special_cursors"])
+                {
+                    if (E_CURSOR_COMBAT == cursor["cursor_id"])
+                    {
+                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(CombatCursor.second.customFilePath); }
+                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(CombatCursor.second.customFileFormat); }
+                        if (!cursor["width"].is_null()) { cursor["width"].get_to(CombatCursor.second.customWidth); }
+                        if (!cursor["height"].is_null()) { cursor["height"].get_to(CombatCursor.second.customHeight); }
+                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(CombatCursor.second.customHotspotX); }
+                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(CombatCursor.second.customHotspotY); }
+                    }
+                    else if (E_CURSOR_NEXUS == cursor["cursor_id"])
+                    {
+                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(NexusCursor.second.customFilePath); }
+                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(NexusCursor.second.customFileFormat); }
+                        if (!cursor["width"].is_null()) { cursor["width"].get_to(NexusCursor.second.customWidth); }
+                        if (!cursor["height"].is_null()) { cursor["height"].get_to(NexusCursor.second.customHeight); }
+                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(NexusCursor.second.customHotspotX); }
+                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(NexusCursor.second.customHotspotY); }
+                    }
+                }
+            }
         }
     }
 
@@ -135,6 +169,31 @@ namespace Settings
                     if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(Cursors[key].defaultPreview.height); }
                 }
             }
+
+            if (!object["special_cursors"].is_null())
+            {
+                for (auto &cursor : object["special_cursors"])
+                {
+                    if (E_CURSOR_COMBAT == cursor["cursor_id"])
+                    {
+                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(CombatCursor.second.customPreview.bits); }
+                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(CombatCursor.second.customPreview.width); }
+                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(CombatCursor.second.customPreview.height); }
+                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(CombatCursor.second.defaultPreview.bits); }
+                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(CombatCursor.second.defaultPreview.width); }
+                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(CombatCursor.second.defaultPreview.height); }
+                    }
+                    else if (E_CURSOR_NEXUS == cursor["cursor_id"])
+                    {
+                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(NexusCursor.second.customPreview.bits); }
+                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(NexusCursor.second.customPreview.width); }
+                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(NexusCursor.second.customPreview.height); }
+                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(NexusCursor.second.defaultPreview.bits); }
+                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(NexusCursor.second.defaultPreview.width); }
+                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(NexusCursor.second.defaultPreview.height); }
+                    }
+                }
+            }
         }
     }
 
@@ -142,8 +201,10 @@ namespace Settings
     {
         for (auto& cursor : Cursors)
         {
-            LoadCustomCursor(cursor);
+            LoadCustomCursor(cursor.second);
         }
+        LoadCustomCursor(CombatCursor.second);
+        LoadCustomCursor(NexusCursor.second);
     }
 
     json SerialiseSetting(CursorPair cursor)

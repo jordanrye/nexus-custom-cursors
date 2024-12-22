@@ -3,6 +3,6 @@
 
 #include "shared_types.h"
 
-void LoadCustomCursor(CursorPair& cursor);
+void LoadCustomCursor(CursorProperties& cursor);
 
 #endif /* CURSOR_LOAD_H */

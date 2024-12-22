@@ -9,46 +9,46 @@
 static bool IsFileType(const std::string& str, const std::string& ext);
 static std::string GetFilePath(std::string path);
 
-void LoadCustomCursor(CursorPair& cursor)
+void LoadCustomCursor(CursorProperties& cursor)
 {
-    std::string filepath = GetFilePath(cursor.second.customFilePath);
+    std::string filepath = GetFilePath(cursor.customFilePath);
 
     if (!filepath.empty())
     {
         /* create cursor */
         if (IsFileType(filepath, ".png"))
         {
-            cursor.second.customCursor = CreateCursorFromPNG(
+            cursor.customCursor = CreateCursorFromPNG(
                 filepath,
-                cursor.second.customWidth,
-                cursor.second.customHeight,
-                cursor.second.customHotspotX,
-                cursor.second.customHotspotY
+                cursor.customWidth,
+                cursor.customHeight,
+                cursor.customHotspotX,
+                cursor.customHotspotY
             );
-            cursor.second.customFileFormat = E_FILE_FORMAT_PNG;
+            cursor.customFileFormat = E_FILE_FORMAT_PNG;
         }
         else if (IsFileType(filepath, ".cur") || IsFileType(filepath, ".ani"))
         {
-            cursor.second.customCursor = CreateCursorFromCUR(
+            cursor.customCursor = CreateCursorFromCUR(
                 filepath,
-                cursor.second.customWidth,
-                cursor.second.customHeight
+                cursor.customWidth,
+                cursor.customHeight
             );
-            cursor.second.customFileFormat = E_FILE_FORMAT_CUR;
+            cursor.customFileFormat = E_FILE_FORMAT_CUR;
         }
         else
         {
-            cursor.second.customCursor = nullptr;
-            cursor.second.customFileFormat = E_FILE_FORMAT_INV;
+            cursor.customCursor = nullptr;
+            cursor.customFileFormat = E_FILE_FORMAT_INV;
             APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "Failed to load custom cursor (unsupported file type).");
         }
 
         /* create preview */
-        if (cursor.second.customCursor != nullptr)
+        if (cursor.customCursor != nullptr)
         {
-            if (GetBitsFromCursor(cursor.second.customCursor, cursor.second.customPreview.width, cursor.second.customPreview.height, cursor.second.customPreview.bits))
+            if (GetBitsFromCursor(cursor.customCursor, cursor.customPreview.width, cursor.customPreview.height, cursor.customPreview.bits))
             {
-                aQueuedPreview.push_back(&cursor.second.customPreview);
+                aQueuedPreview.push_back(&cursor.customPreview);
             }
         }
     }

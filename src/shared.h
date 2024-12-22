@@ -19,15 +19,18 @@ extern ID3D11Device* D3D11Device;
 
 extern std::filesystem::path GameDir;
 extern std::filesystem::path AddonDir;
+extern std::filesystem::path CacheDir;
 extern std::filesystem::path IconsDir;
 
 extern Mumble::Data* MumbleLink;
 extern Mumble::Identity* MumbleIdentity;
 extern NexusLinkData* NexusLink;
 
-extern CursorMap Cursors;
 extern HCURSOR hCustomCursor;
-
 extern std::vector<CursorPreview*> aQueuedPreview;
+
+extern CursorMap Cursors;
+extern CursorPair CombatCursor;
+extern CursorPair NexusCursor;
 
 #endif /* SHARED_H */

@@ -16,6 +16,11 @@ typedef enum {
     E_FILE_FORMAT_X11 = 3
 } E_FILE_FORMAT;
 
+typedef enum {
+    E_CURSOR_COMBAT = 0,
+    E_CURSOR_NEXUS = 1
+} E_CURSOR_GW2;
+
 typedef uint32_t Hash;
 
 struct CursorPreview {
