@@ -291,125 +291,208 @@ void AddonRender()
     }
 }
 
-void RowHeader(std::string c1, std::string c2, std::string c3, std::string c4, std::string c5, std::string c6);
-void RowCursor(std::string identifier, CursorPair& cursor, float32_t& inputWidth);
-void ColumnPreview(CursorPair& cursor);
-void ColumnIdentifier(std::string identifier);
-void ColumnFilepath(float32_t& inputWidth, CursorPair& cursor);
-void ColumnWidth(float32_t& inputWidth, CursorPair& cursor);
-void ColumnHeight(float32_t& inputWidth, CursorPair& cursor);
-void ColumnHotspotX(float32_t& inputWidth, CursorPair& cursor);
-void ColumnHotspotY(float32_t& inputWidth, CursorPair& cursor);
-void ColumnRemove(CursorPair& cursor);
+static void ItemSelectableImage(CursorPair& cursor, int& selected, const ImVec2& selectableSize, const ImVec2& iconSize);
+static void ItemSelectableText(const char* str, int& selected, const ImVec2& selectableSize, const ImVec2& textSize);
+static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inputWidth);
+static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth);
+static void ColumnIdentifier(const char* identifier);
+static void ColumnPreview(const float32_t& inputWidth, CursorPreview& preview);
+static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnHotspotY(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnRemove(CursorPair& cursor);
 
 void AddonOptions()
 {
-    static const float32_t windowPadding = 24;
-    float32_t inputWidth = (ImGui::GetWindowContentRegionWidth() - windowPadding) / 7;
-    
-    ImGui::BeginTable("Cursors", 8, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit);
+    static int selected = 0;
+
+    /* navigation view */
     {
-        RowHeader("UID", "Filepath", "Width", "Height", "Hotspot X", "Hotspot Y");
-        RowCursor("Combat", CombatCursor, inputWidth);
-        RowCursor("Nexus", NexusCursor, inputWidth);
-        for (auto& cursor : Cursors)
+        static const ImVec2 minPadding(10.f, 10.f);
+        static const ImVec2 iconSize(32.f, 32.f);
+        static const char* text = "General";
+        static const ImVec2 textSize = ImGui::CalcTextSize(text);
+        static const ImVec2 _maxSize = ImGui::MaxSizeImVec2(iconSize, textSize);
+        static const ImVec2 selectableTextSize = {
+            _maxSize.x + minPadding.x + ImGui::GetStyle().ScrollbarSize,
+            textSize.y + minPadding.y
+        };
+        static const ImVec2 selectableImageSize = {
+            _maxSize.x + minPadding.x + ImGui::GetStyle().ScrollbarSize,
+            iconSize.y
+        };
+        static const ImVec2 _maxSelectableSize = ImGui::MaxSizeImVec2(selectableTextSize, selectableImageSize);
+
+        if (ImGui::BeginChild("##Navigation", ImVec2(_maxSelectableSize.x, 0.f), true, ImGuiWindowFlags_NoResize))
         {
-            RowCursor(std::to_string(cursor.first), cursor, inputWidth);
-        }
+            ItemSelectableText(text, selected, selectableTextSize, textSize);
+            ItemSelectableImage(CombatCursor, selected, selectableImageSize, iconSize);
+            ItemSelectableImage(NexusCursor, selected, selectableImageSize, iconSize);
 
-        ImGui::EndTable();
-    }
-}
-
-void RowHeader(std::string c1, std::string c2, std::string c3, std::string c4, std::string c5, std::string c6)
-{
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(1); ImGui::Text(c1.c_str()); /* Identifier */
-    ImGui::TableSetColumnIndex(2); ImGui::Text(c2.c_str()); /* Filepath */
-    ImGui::TableSetColumnIndex(3); ImGui::Text(c3.c_str()); /* Width */
-    ImGui::TableSetColumnIndex(4); ImGui::Text(c4.c_str()); /* Height */
-    ImGui::TableSetColumnIndex(5); ImGui::Text(c5.c_str()); /* Hotspot X */
-    ImGui::TableSetColumnIndex(6); ImGui::Text(c6.c_str()); /* Hotspot Y */
-}
-
-void RowCursor(std::string identifier, CursorPair& cursor, float32_t& inputWidth)
-{
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0); ColumnPreview(cursor);
-    ImGui::TableSetColumnIndex(1); ColumnIdentifier(identifier);
-    ImGui::TableSetColumnIndex(2); ColumnFilepath(inputWidth, cursor);
-    if (cursor.second.customFilePath != "")
-    {
-        ImGui::TableSetColumnIndex(3); ColumnWidth(inputWidth, cursor);
-        ImGui::TableSetColumnIndex(4); ColumnHeight(inputWidth, cursor);
-
-        if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
-        {
-            ImGui::TableSetColumnIndex(5); ColumnHotspotX(inputWidth, cursor);
-            ImGui::TableSetColumnIndex(6); ColumnHotspotY(inputWidth, cursor);
-        }
-
-        ImGui::TableSetColumnIndex(7); ColumnRemove(cursor);
-    }
-}
-
-void ColumnPreview(CursorPair& cursor)
-{
-    auto resource = cursor.second.customPreview.resource ? cursor.second.customPreview.resource : cursor.second.defaultPreview.resource;
-
-    if (resource != nullptr)
-    {
-        ImGui::Image((ImTextureID)(intptr_t)resource, ImVec2(32, 32));
-
-        if (ImGui::IsItemHovered())
-        {
-            if (ImGui::Tooltip())
+            for (auto& cursor : Cursors)
             {
-                ImGui::BeginTable("PreviewTooltip", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner);
-                {
-                    ImGui::TableNextColumn();
-                    ImGui::Text("Default");
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("Custom");
-
-                    ImGui::TableNextRow();
-
-                    ImGui::TableNextColumn();
-                    if (cursor.second.defaultPreview.resource != nullptr)
-                    {
-                        ImGui::Image(cursor.second.defaultPreview.resource, ImVec2(cursor.second.defaultPreview.width, cursor.second.defaultPreview.height));
-                    }
-
-                    ImGui::TableNextColumn();
-                    if (cursor.second.customPreview.resource != nullptr)
-                    {
-                        ImGui::Image(cursor.second.customPreview.resource, ImVec2(cursor.second.customPreview.width, cursor.second.customPreview.height));
-                    }
-
-                    ImGui::EndTable();
-                }
-
-                ImGui::EndTooltip();
+                ItemSelectableImage(cursor, selected, selectableImageSize, iconSize);
             }
         }
+        ImGui::EndChild();
+    }
+    ImGui::SameLine();
+
+    /* options view */
+    {
+        const float32_t inputWidth = ImGui::GetWindowContentRegionWidth() * 0.75f;
+
+        ImGui::BeginGroup();
+        if (ImGui::BeginChild("##Content", ImVec2(-FLT_MIN, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ItemOptionsGeneral(selected, inputWidth);
+            ItemOptions(CombatCursor, selected, inputWidth);
+            ItemOptions(NexusCursor, selected, inputWidth);
+
+            for (auto& cursor : Cursors)
+            {
+                ItemOptions(cursor, selected, inputWidth);
+            }
+        }
+        ImGui::EndChild();
+        ImGui::EndGroup();
     }
 }
 
-void ColumnIdentifier(std::string identifier)
+static void ItemSelectableImage(CursorPair& cursor, int& selected, const ImVec2& selectableSize, const ImVec2& iconSize)
 {
-    static const float textSize = ImGui::CalcTextSize("WWWWWWWWWW").x;
+    const ImVec2 pos = ImGui::GetCursorPos();
+    const ImVec2 padding = {
+        (selectableSize.x - iconSize.x - ImGui::GetStyle().ScrollbarSize) / 2,
+        (selectableSize.y - iconSize.y) / 2
+    };
 
-    ImGui::PushItemWidth(textSize);
-    ImGui::PaddedText(identifier.c_str(), 0.0F, 2.0F);
-    ImGui::PopItemWidth();
+    /* render selectable area */
+    ImGui::SetCursorPos(pos);
+    if (ImGui::Selectable(("##" + std::to_string(cursor.first)).c_str(), (selected == cursor.first), ImGuiSelectableFlags_None, selectableSize))
+    {
+        selected = cursor.first;
+    }
+
+    /* render image */
+    ImGui::SetItemAllowOverlap();
+    ImGui::SetCursorPos(ImVec2((pos.x + padding.x), (pos.y + padding.y)));
+    ImGui::Image(cursor.second.defaultPreview.resource, iconSize);
+    ImGui::SetCursorPos(ImVec2(pos.x, (pos.y + selectableSize.y + ImGui::GetStyle().ItemSpacing.y)));
 }
 
-void ColumnFilepath(float32_t& inputWidth, CursorPair& cursor)
+static void ItemSelectableText(const char* str, int& selected, const ImVec2& selectableSize, const ImVec2& textSize)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
-    ImGui::PushItemWidth(inputWidth * 2);
-    if (ImGui::Button((cursor.second.customFilePath + "##File-" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
+    const ImVec2 pos = ImGui::GetCursorPos();
+    const ImVec2 padding = {
+        (selectableSize.x - textSize.x - ImGui::GetStyle().ScrollbarSize) / 2,
+        (selectableSize.y - textSize.y) / 2
+    };
+
+    /* render selectable area */
+    ImGui::SetCursorPos(pos);
+    if (ImGui::Selectable(("##" + std::string(str)).c_str(), (selected == 0), ImGuiSelectableFlags_None, selectableSize))
+    {
+        selected = 0;
+    }
+
+    /* render text */
+    ImGui::SetItemAllowOverlap();
+    ImGui::SetCursorPos(ImVec2((pos.x + padding.x), (pos.y + padding.y)));
+    ImGui::Text(str);
+    ImGui::SetCursorPos(ImVec2(pos.x, (pos.y + selectableSize.y + ImGui::GetStyle().ItemSpacing.y)));
+}
+
+static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inputWidth)
+{
+    if (selected == cursor.first)
+    {
+        auto preview = cursor.second.customPreview.resource ? cursor.second.customPreview : cursor.second.defaultPreview;
+
+        ColumnIdentifier(std::to_string(cursor.first).c_str());
+
+        if (preview.resource != nullptr)
+        {
+            ColumnPreview(inputWidth, preview);
+            ColumnFilepath(inputWidth, cursor);
+
+            if (cursor.second.customFilePath != "")
+            {
+                ColumnWidth(inputWidth, cursor);
+                ColumnHeight(inputWidth, cursor);
+
+                if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
+                {
+                    ColumnHotspotX(inputWidth, cursor);
+                    ColumnHotspotY(inputWidth, cursor);
+                }
+            }
+        }
+        
+        ColumnRemove(cursor);
+    }
+}
+
+static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
+{
+    static bool _flag1 = false;
+    static bool _flag2 = false;
+    static bool _flag3 = false;
+    static bool _flag4 = false;
+
+    if (selected == 0)
+    {
+        ImGui::BeginGroupPanel("Special Cursors", ImVec2(inputWidth, 0.f));
+        if (ImGui::Checkbox("Add 'in-combat' cursor override", &_flag1))
+        {
+            /* do something */
+        }
+        if (ImGui::Checkbox("Add 'Nexus' cursor override", &_flag2))
+        {
+            /* do something */
+        }
+        ImGui::EndGroupPanel();
+
+        ImGui::BeginGroupPanel("Configuration", ImVec2(inputWidth, 0.f));
+        if (ImGui::Checkbox("Separate width and height inputs", &_flag3))
+        {
+            /* do something */
+        }
+        ImGui::EndGroupPanel();
+        
+        ImGui::BeginGroupPanel("Debugging", ImVec2(inputWidth, 0.f));
+        if (ImGui::Checkbox("Enable debug window", &_flag4))
+        {
+            /* do something */
+        }
+        ImGui::EndGroupPanel();
+    }
+}
+
+static void ColumnIdentifier(const char* identifier)
+{
+    ImGui::Text("UID:");
+    ImGui::SameLine();
+    ImGui::Text(identifier);
+}
+
+static void ColumnPreview(const float32_t& inputWidth, CursorPreview& preview)
+{
+    ImGui::BeginGroupPanel("Preview", ImVec2(inputWidth, 0.f));
+    auto pos = ImGui::GetCursorPos();
+    ImGui::SetCursorPos(ImVec2((pos.x + ((inputWidth - preview.width) / 2)), pos.y));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 20.f));
+    ImGui::Image((ImTextureID)(intptr_t)preview.resource, ImVec2(preview.width, preview.height));
+    ImGui::PopStyleVar(1);
+    ImGui::EndGroupPanel();
+}
+
+static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::Button((cursor.second.customFilePath + "##" + std::to_string(cursor.first)).c_str(), ImVec2(ImGui::CalcItemWidth(), 0)))
     {
         std::thread([&cursor] {
             OPENFILENAME ofn{};
@@ -437,14 +520,15 @@ void ColumnFilepath(float32_t& inputWidth, CursorPair& cursor)
         }).detach();
     }
     ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
+
+    ImGui::SameLine();
+    ImGui::TextPadded("Filepath", ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
 }
 
-void ColumnWidth(float32_t& inputWidth, CursorPair& cursor)
+static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("##Width" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
+    if (ImGui::InputInt(("Width##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
     {
         if (cursor.second.customWidth < 1)
         {
@@ -454,14 +538,12 @@ void ColumnWidth(float32_t& inputWidth, CursorPair& cursor)
         Settings::Save();
     }
     ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
 }
 
-void ColumnHeight(float32_t& inputWidth, CursorPair& cursor)
+static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("##Height" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
+    if (ImGui::InputInt(("Height##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
     {
         if (cursor.second.customHeight < 1)
         {
@@ -471,14 +553,12 @@ void ColumnHeight(float32_t& inputWidth, CursorPair& cursor)
         Settings::Save();
     }
     ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
 }
 
-void ColumnHotspotX(float32_t& inputWidth, CursorPair& cursor)
+static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("##HotspotX" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
+    if (ImGui::InputInt(("Hotspot X##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
     {
         if (cursor.second.customHotspotX < 1)
         {
@@ -488,14 +568,12 @@ void ColumnHotspotX(float32_t& inputWidth, CursorPair& cursor)
         Settings::Save();
     }
     ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
 }
 
-void ColumnHotspotY(float32_t& inputWidth, CursorPair& cursor)
+static void ColumnHotspotY(const float32_t& inputWidth, CursorPair& cursor)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0, 2.0));
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("##HotspotY" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
+    if (ImGui::InputInt(("Hotspot Y##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
     {
         if (cursor.second.customHotspotY < 1)
         {
@@ -505,18 +583,15 @@ void ColumnHotspotY(float32_t& inputWidth, CursorPair& cursor)
         Settings::Save();
     }
     ImGui::PopItemWidth();
-    ImGui::PopStyleVar();
 }
 
-void ColumnRemove(CursorPair& cursor)
+static void ColumnRemove(CursorPair& cursor)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0, 2.0));
-    if (ImGui::Button(("x##Remove" + std::to_string(cursor.first)).c_str()))
+    if (ImGui::Button(("Delete##" + std::to_string(cursor.first)).c_str()))
     {
         cursor.second = CursorProperties();
         Settings::Save();
     }
-    ImGui::PopStyleVar();
 }
 
 static void GetProcessPointers()

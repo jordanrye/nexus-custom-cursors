@@ -172,6 +172,7 @@
     <ClInclude Include="src\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\imgui_extensions.h" />
     <ClInclude Include="src\nlohmann\json.hpp" />
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\shared.h" />

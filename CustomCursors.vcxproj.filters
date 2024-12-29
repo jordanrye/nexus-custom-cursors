@@ -92,6 +92,9 @@
     <ClInclude Include="src\cursor_preview.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\imgui_extensions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\entry.cpp">
