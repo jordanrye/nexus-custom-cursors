@@ -26,6 +26,21 @@ namespace ImGui
         return result;
     }
 
+    static bool SliderIntStep(const char* label, int* v, int v_min, int v_max, int v_step, const char* format = "%d", ImGuiSliderFlags flags = 0)
+    {
+        bool value_changed = false;
+
+        /* map values from [v_min, v_max] to [0, N] */
+        int v_i = (*v - v_min) / v_step;
+        int N = (v_max - v_min) / v_step;
+        value_changed = SliderInt(label, &v_i, 0, N, format, flags);
+
+        /* re-map values in range [v_min, v_max] */
+        *v = v_min + v_i * v_step;
+        
+        return value_changed;
+    }
+
     static bool Tooltip()
     {
         bool hovered = ImGui::IsItemHovered();

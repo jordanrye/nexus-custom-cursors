@@ -545,32 +545,56 @@ static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor)
 
 static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
 {
+    const auto originalWidth = static_cast<float32_t>(cursor.second.customWidth);
+    const auto originalHeight = static_cast<float32_t>(cursor.second.customHeight);
+
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("Width##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
+    std::string format = std::to_string(cursor.second.customWidth) + "x" + std::to_string(cursor.second.customHeight);
+    if (ImGui::SliderIntStep(("Size##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 256U, 8U, format.c_str(), ImGuiSliderFlags_NoInput))
     {
         if (cursor.second.customWidth < 1)
         {
             cursor.second.customWidth = 1;
         }
+
+        cursor.second.customHeight = static_cast<int32_t>(originalHeight * (static_cast<float32_t>(cursor.second.customWidth) / originalWidth));
+
+        if (cursor.second.customHeight < 1)
+        {
+            cursor.second.customHeight = 1;
+        } 
+
         LoadCustomCursor(cursor.second);
         Settings::Save();
     }
     ImGui::PopItemWidth();
+
+    // ImGui::PushItemWidth(inputWidth);
+    // if (ImGui::InputInt(("Width##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
+    // {
+    //     if (cursor.second.customWidth < 1)
+    //     {
+    //         cursor.second.customWidth = 1;
+    //     }
+    //     LoadCustomCursor(cursor.second);
+    //     Settings::Save();
+    // }
+    // ImGui::PopItemWidth();
 }
 
 static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor)
 {
-    ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("Height##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
-    {
-        if (cursor.second.customHeight < 1)
-        {
-            cursor.second.customHeight = 1;
-        }
-        LoadCustomCursor(cursor.second);
-        Settings::Save();
-    }
-    ImGui::PopItemWidth();
+    // ImGui::PushItemWidth(inputWidth);
+    // if (ImGui::InputInt(("Height##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
+    // {
+    //     if (cursor.second.customHeight < 1)
+    //     {
+    //         cursor.second.customHeight = 1;
+    //     }
+    //     LoadCustomCursor(cursor.second);
+    //     Settings::Save();
+    // }
+    // ImGui::PopItemWidth();
 }
 
 static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor)
