@@ -239,6 +239,16 @@ void AddonRenderPreview()
         }
         aQueuedPreview.erase(aQueuedPreview.begin());
     }
+
+    if ((nullptr == NexusIcon) || (nullptr == NexusIcon->Resource))
+    {
+        NexusIcon = APIDefs->Textures.Get("ICON_NEXUS_HOVER");
+    }
+
+    if ((nullptr == CombatIcon) || (nullptr == CombatIcon->Resource))
+    {
+        CombatIcon = APIDefs->Textures.GetOrCreateFromResource("CC_ICON_COMBAT", CC_ICON_COMBAT, hSelf);
+    }
 }
 
 void AddonRender()
@@ -291,7 +301,7 @@ void AddonRender()
     }
 }
 
-static void ItemSelectableImage(CursorPair& cursor, int& selected, const ImVec2& selectableSize, const ImVec2& iconSize);
+static void ItemSelectableImage(Hash UID, ID3D11ShaderResourceView* icon, const ImVec2& iconSize, int& selected, const ImVec2& selectableSize);
 static void ItemSelectableText(const char* str, int& selected, const ImVec2& selectableSize, const ImVec2& textSize);
 static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inputWidth);
 static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth);
@@ -328,12 +338,20 @@ void AddonOptions()
         if (ImGui::BeginChild("##Navigation", ImVec2(_maxSelectableSize.x, 0.f), true, ImGuiWindowFlags_NoResize))
         {
             ItemSelectableText(text, selected, selectableTextSize, textSize);
-            ItemSelectableImage(CombatCursor, selected, selectableImageSize, iconSize);
-            ItemSelectableImage(NexusCursor, selected, selectableImageSize, iconSize);
+
+            if ((nullptr != NexusIcon) && (nullptr != NexusIcon->Resource))
+            {
+                ItemSelectableImage(NexusCursor.first, (ID3D11ShaderResourceView*)(NexusIcon->Resource), iconSize, selected, selectableImageSize);
+            }
+            
+            if ((nullptr != CombatIcon) && (nullptr != CombatIcon->Resource))
+            {
+                ItemSelectableImage(CombatCursor.first, (ID3D11ShaderResourceView*)(CombatIcon->Resource), iconSize, selected, selectableImageSize);
+            }
 
             for (auto& cursor : Cursors)
             {
-                ItemSelectableImage(cursor, selected, selectableImageSize, iconSize);
+                ItemSelectableImage(cursor.first, cursor.second.defaultPreview.resource, iconSize, selected, selectableImageSize);
             }
         }
         ImGui::EndChild();
@@ -342,14 +360,14 @@ void AddonOptions()
 
     /* options view */
     {
-        const float32_t inputWidth = ImGui::GetWindowContentRegionWidth() * 0.75f;
+        const float32_t inputWidth = ImGui::GetWindowContentRegionWidth() * 0.65f;
 
         ImGui::BeginGroup();
         if (ImGui::BeginChild("##Content", ImVec2(-FLT_MIN, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ItemOptionsGeneral(selected, inputWidth);
-            ItemOptions(CombatCursor, selected, inputWidth);
             ItemOptions(NexusCursor, selected, inputWidth);
+            ItemOptions(CombatCursor, selected, inputWidth);
 
             for (auto& cursor : Cursors)
             {
@@ -361,7 +379,7 @@ void AddonOptions()
     }
 }
 
-static void ItemSelectableImage(CursorPair& cursor, int& selected, const ImVec2& selectableSize, const ImVec2& iconSize)
+static void ItemSelectableImage(Hash UID, ID3D11ShaderResourceView* icon, const ImVec2& iconSize, int& selected, const ImVec2& selectableSize)
 {
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 padding = {
@@ -371,15 +389,15 @@ static void ItemSelectableImage(CursorPair& cursor, int& selected, const ImVec2&
 
     /* render selectable area */
     ImGui::SetCursorPos(pos);
-    if (ImGui::Selectable(("##" + std::to_string(cursor.first)).c_str(), (selected == cursor.first), ImGuiSelectableFlags_None, selectableSize))
+    if (ImGui::Selectable(("##" + std::to_string(UID)).c_str(), (selected == UID), ImGuiSelectableFlags_None, selectableSize))
     {
-        selected = cursor.first;
+        selected = UID;
     }
 
     /* render image */
     ImGui::SetItemAllowOverlap();
     ImGui::SetCursorPos(ImVec2((pos.x + padding.x), (pos.y + padding.y)));
-    ImGui::Image(cursor.second.defaultPreview.resource, iconSize);
+    ImGui::Image(icon, iconSize);
     ImGui::SetCursorPos(ImVec2(pos.x, (pos.y + selectableSize.y + ImGui::GetStyle().ItemSpacing.y)));
 }
 

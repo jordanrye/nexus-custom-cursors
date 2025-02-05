@@ -2,6 +2,7 @@
 #define SHARED_H
 
 #include "shared_types.h"
+#include "resource.h"
 #include "utilities.h"
 
 #include "nexus/Nexus.h"
@@ -32,5 +33,8 @@ extern std::vector<CursorPreview*> aQueuedPreview;
 extern CursorMap Cursors;
 extern CursorPair CombatCursor;
 extern CursorPair NexusCursor;
+
+extern Texture* CombatIcon;
+extern Texture* NexusIcon;
 
 #endif /* SHARED_H */

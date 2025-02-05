@@ -95,6 +95,9 @@
     <ClInclude Include="src\imgui_extensions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\entry.cpp">
@@ -141,5 +144,11 @@
     <None Include="scripts\version.bat">
       <Filter>Scripts</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CustomCursors.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resources\CC_ICON_COMBAT.png" />
   </ItemGroup>
 </Project>

@@ -26,3 +26,6 @@ std::vector<CursorPreview*> aQueuedPreview;
 CursorMap Cursors;
 CursorPair CombatCursor = {static_cast<Hash>(E_CURSOR_COMBAT), CursorProperties()};
 CursorPair NexusCursor = {static_cast<Hash>(E_CURSOR_NEXUS), CursorProperties()};
+
+Texture* CombatIcon = nullptr;
+Texture* NexusIcon = nullptr;
