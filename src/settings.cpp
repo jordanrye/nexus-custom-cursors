@@ -237,8 +237,8 @@ namespace Settings
     {
         for (auto& cursor : Cursors)
         {
-            aQueuedPreview.push_back(&cursor.second.customPreview);
-            aQueuedPreview.push_back(&cursor.second.defaultPreview);
+            aQueueTexture.push(&cursor.second.customPreview);
+            aQueueTexture.push(&cursor.second.defaultPreview);
         }
     }
 

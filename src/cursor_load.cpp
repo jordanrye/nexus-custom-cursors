@@ -48,7 +48,7 @@ void LoadCustomCursor(CursorProperties& cursor)
         {
             if (GetBitsFromCursor(cursor.customCursor, cursor.customPreview.width, cursor.customPreview.height, cursor.customPreview.bits))
             {
-                aQueuedPreview.push_back(&cursor.customPreview);
+                aQueueTexture.push(&cursor.customPreview);
             }
         }
     }

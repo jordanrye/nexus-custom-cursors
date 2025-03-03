@@ -18,7 +18,8 @@
 void OnMumbleIdentityUpdated(void* aEventArgs);
 void AddonLoad(AddonAPI* aApi);
 void AddonUnload();
-void AddonRenderPreview();
+void AddonQueueTexture();
+void AddonQueueDelete();
 void AddonRender();
 void AddonOptions();
 
@@ -36,13 +37,12 @@ SETCURSOR fpSetCursor = NULL; /* pointer to call original SetCursor */
 HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 {
     uint32_t key = GetCursorHash(hCursor);
-    auto& io = ImGui::GetIO();
 
     if (MumbleLink->Context.IsInCombat && CombatCursor.second.customCursor)
     {
         hCustomCursor = CombatCursor.second.customCursor;
     }
-    else if (io.WantCaptureMouse && NexusCursor.second.customCursor)
+    else if (ImGui::GetIO().WantCaptureMouse && NexusCursor.second.customCursor)
     {
         hCustomCursor = NexusCursor.second.customCursor;
     }
@@ -176,7 +176,8 @@ void AddonLoad(AddonAPI* aApi)
 
     GetProcessPointers();
 
-    APIDefs->Renderer.Register(ERenderType_PreRender, AddonRenderPreview);
+    APIDefs->Renderer.Register(ERenderType_PreRender, AddonQueueTexture);
+    APIDefs->Renderer.Register(ERenderType_PreRender, AddonQueueDelete);
     APIDefs->Renderer.Register(ERenderType_Render, AddonRender);
     APIDefs->Renderer.Register(ERenderType_OptionsRender, AddonOptions);
 
@@ -197,7 +198,8 @@ void AddonUnload()
 {
     APIDefs->Renderer.Deregister(AddonOptions); 
     APIDefs->Renderer.Deregister(AddonRender);
-    APIDefs->Renderer.Deregister(AddonRenderPreview);
+    APIDefs->Renderer.Deregister(AddonQueueDelete);
+    APIDefs->Renderer.Deregister(AddonQueueTexture);
 
     if (pSetCursor)
     {
@@ -228,16 +230,16 @@ void AddonUnload()
     Settings::Save();
 }
 
-void AddonRenderPreview()
+void AddonQueueTexture()
 {
-    while (aQueuedPreview.size() > 0)
+    while (aQueueTexture.size() > 0)
     {
-        auto preview = aQueuedPreview.front();
+        auto preview = aQueueTexture.front();
         if (preview != nullptr)
         {
             CreateResourceFromBits(preview->width, preview->height, preview->bits, &(preview->resource));
         }
-        aQueuedPreview.erase(aQueuedPreview.begin());
+        aQueueTexture.pop();
     }
 
     if ((nullptr == NexusIcon) || (nullptr == NexusIcon->Resource))
@@ -248,6 +250,15 @@ void AddonRenderPreview()
     if ((nullptr == CombatIcon) || (nullptr == CombatIcon->Resource))
     {
         CombatIcon = APIDefs->Textures.GetOrCreateFromResource("CC_ICON_COMBAT", CC_ICON_COMBAT, hSelf);
+    }
+}
+
+void AddonQueueDelete()
+{
+    while (aQueueDelete.size() > 0)
+    {
+        Cursors.erase(aQueueDelete.front());
+        aQueueDelete.pop();
     }
 }
 
@@ -430,22 +441,18 @@ static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inpu
         auto preview = cursor.second.customPreview.resource ? cursor.second.customPreview : cursor.second.defaultPreview;
 
         ColumnIdentifier(std::to_string(cursor.first).c_str());
+        ColumnPreview(inputWidth, preview);
+        ColumnFilepath(inputWidth, cursor);
 
-        if (preview.resource != nullptr)
+        if (cursor.second.customFilePath != "")
         {
-            ColumnPreview(inputWidth, preview);
-            ColumnFilepath(inputWidth, cursor);
+            ColumnWidth(inputWidth, cursor);
+            ColumnHeight(inputWidth, cursor);
 
-            if (cursor.second.customFilePath != "")
+            if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
             {
-                ColumnWidth(inputWidth, cursor);
-                ColumnHeight(inputWidth, cursor);
-
-                if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
-                {
-                    ColumnHotspotX(inputWidth, cursor);
-                    ColumnHotspotY(inputWidth, cursor);
-                }
+                ColumnHotspotX(inputWidth, cursor);
+                ColumnHotspotY(inputWidth, cursor);
             }
         }
         
@@ -502,7 +509,10 @@ static void ColumnPreview(const float32_t& inputWidth, CursorPreview& preview)
     auto pos = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2((pos.x + ((inputWidth - preview.width) / 2)), pos.y));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 20.f));
-    ImGui::Image((ImTextureID)(intptr_t)preview.resource, ImVec2(preview.width, preview.height));
+    if (nullptr != preview.resource)
+    {
+        ImGui::Image((ImTextureID)(intptr_t)preview.resource, ImVec2(preview.width, preview.height));
+    }
     ImGui::PopStyleVar(1);
     ImGui::EndGroupPanel();
 }
@@ -530,7 +540,10 @@ static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor)
 
             if (GetOpenFileName(&ofn) == TRUE)
             {
+                auto defaultPreview = cursor.second.defaultPreview;
+                
                 cursor.second = CursorProperties();
+                cursor.second.defaultPreview = defaultPreview;
                 cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
                 LoadCustomCursor(cursor.second);
                 Settings::Save();
@@ -632,6 +645,7 @@ static void ColumnRemove(CursorPair& cursor)
     if (ImGui::Button(("Delete##" + std::to_string(cursor.first)).c_str()))
     {
         cursor.second = CursorProperties();
+        aQueueDelete.push(cursor.first);
         Settings::Save();
     }
 }
@@ -666,6 +680,6 @@ static void GetCursorPreview(HCURSOR hCursor, CursorProperties& properties)
 {
     if (GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits));
     {
-        aQueuedPreview.push_back(&properties.defaultPreview);
+        aQueueTexture.push(&properties.defaultPreview);
     }
 }

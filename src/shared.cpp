@@ -21,7 +21,8 @@ Mumble::Identity* MumbleIdentity = nullptr;
 NexusLinkData* NexusLink = nullptr;
 
 HCURSOR hCustomCursor = nullptr;
-std::vector<CursorPreview*> aQueuedPreview;
+std::queue<CursorPreview*> aQueueTexture;
+std::queue<Hash> aQueueDelete;
 
 CursorMap Cursors;
 CursorPair CombatCursor = {static_cast<Hash>(E_CURSOR_COMBAT), CursorProperties()};

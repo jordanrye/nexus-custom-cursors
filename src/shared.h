@@ -10,7 +10,7 @@
 
 #include <d3d11.h>
 #include <filesystem>
-#include <vector>
+#include <queue>
 
 extern AddonAPI* APIDefs;
 extern AddonDefinition AddonDef;
@@ -28,7 +28,8 @@ extern Mumble::Identity* MumbleIdentity;
 extern NexusLinkData* NexusLink;
 
 extern HCURSOR hCustomCursor;
-extern std::vector<CursorPreview*> aQueuedPreview;
+extern std::queue<CursorPreview*> aQueueTexture;
+extern std::queue<Hash> aQueueDelete;
 
 extern CursorMap Cursors;
 extern CursorPair CombatCursor;
