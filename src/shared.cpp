@@ -23,10 +23,12 @@ NexusLinkData* NexusLink = nullptr;
 HCURSOR hCustomCursor = nullptr;
 std::queue<CursorPreview*> aQueueTexture;
 std::queue<Hash> aQueueDelete;
+std::queue<Hash> aQueueUnhide;
 
 CursorMap Cursors;
-CursorPair CombatCursor = {static_cast<Hash>(E_CURSOR_COMBAT), CursorProperties()};
-CursorPair NexusCursor = {static_cast<Hash>(E_CURSOR_NEXUS), CursorProperties()};
+HiddenCursorMap HiddenCursors;
+CursorPair NexusCursor(static_cast<Hash>(E_UID_CURSOR_NEXUS), CursorProperties());
+CursorPair CombatCursor(static_cast<Hash>(E_UID_CURSOR_COMBAT), CursorProperties());
 
 Texture* CombatIcon = nullptr;
 Texture* NexusIcon = nullptr;

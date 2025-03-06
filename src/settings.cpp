@@ -20,6 +20,7 @@ namespace Settings
 
     json SerialiseSetting(CursorPair cursor);
     json SerialisePreview(CursorPair cursor);
+    json SerialisePreview(HiddenCursorPair cursor);
     void QueuePreviews();
 
     void LoadSettings(const std::filesystem::path& aPath)
@@ -80,6 +81,10 @@ namespace Settings
         Settings["special_cursors"] = json::array();
         Previews["special_cursors"] = json::array();
 
+        /* hidden cursors */
+        Settings["hidden_cursors"] = json::array();
+        Previews["hidden_cursors"] = json::array();
+
         for (auto& cursor : Cursors)
         {
             Settings["cursors"].push_back(SerialiseSetting(cursor));
@@ -89,6 +94,11 @@ namespace Settings
         Previews["special_cursors"].push_back(SerialisePreview(CombatCursor));
         Settings["special_cursors"].push_back(SerialiseSetting(NexusCursor));
         Previews["special_cursors"].push_back(SerialisePreview(NexusCursor));
+        for (auto& cursor : HiddenCursors)
+        {
+            Settings["hidden_cursors"].push_back(cursor.first);
+            Previews["hidden_cursors"].push_back(SerialisePreview(cursor));
+        }
 
         Mutex.lock();
         {
@@ -128,16 +138,7 @@ namespace Settings
             {
                 for (auto &cursor : object["special_cursors"])
                 {
-                    if (E_CURSOR_COMBAT == cursor["cursor_id"])
-                    {
-                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(CombatCursor.second.customFilePath); }
-                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(CombatCursor.second.customFileFormat); }
-                        if (!cursor["width"].is_null()) { cursor["width"].get_to(CombatCursor.second.customWidth); }
-                        if (!cursor["height"].is_null()) { cursor["height"].get_to(CombatCursor.second.customHeight); }
-                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(CombatCursor.second.customHotspotX); }
-                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(CombatCursor.second.customHotspotY); }
-                    }
-                    else if (E_CURSOR_NEXUS == cursor["cursor_id"])
+                    if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
                         if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(NexusCursor.second.customFilePath); }
                         if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(NexusCursor.second.customFileFormat); }
@@ -146,6 +147,23 @@ namespace Settings
                         if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(NexusCursor.second.customHotspotX); }
                         if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(NexusCursor.second.customHotspotY); }
                     }
+                    else if (E_UID_CURSOR_COMBAT == cursor["cursor_id"])
+                    {
+                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(CombatCursor.second.customFilePath); }
+                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(CombatCursor.second.customFileFormat); }
+                        if (!cursor["width"].is_null()) { cursor["width"].get_to(CombatCursor.second.customWidth); }
+                        if (!cursor["height"].is_null()) { cursor["height"].get_to(CombatCursor.second.customHeight); }
+                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(CombatCursor.second.customHotspotX); }
+                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(CombatCursor.second.customHotspotY); }
+                    }
+                }
+            }
+
+            if (!object["hidden_cursors"].is_null())
+            {
+                for (auto &hash : object["hidden_cursors"])
+                {
+                    HiddenCursors.insert(HiddenCursorPair(hash, CursorPreview()));
                 }
             }
         }
@@ -174,16 +192,7 @@ namespace Settings
             {
                 for (auto &cursor : object["special_cursors"])
                 {
-                    if (E_CURSOR_COMBAT == cursor["cursor_id"])
-                    {
-                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(CombatCursor.second.customPreview.bits); }
-                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(CombatCursor.second.customPreview.width); }
-                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(CombatCursor.second.customPreview.height); }
-                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(CombatCursor.second.defaultPreview.bits); }
-                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(CombatCursor.second.defaultPreview.width); }
-                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(CombatCursor.second.defaultPreview.height); }
-                    }
-                    else if (E_CURSOR_NEXUS == cursor["cursor_id"])
+                    if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
                         if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(NexusCursor.second.customPreview.bits); }
                         if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(NexusCursor.second.customPreview.width); }
@@ -192,6 +201,27 @@ namespace Settings
                         if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(NexusCursor.second.defaultPreview.width); }
                         if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(NexusCursor.second.defaultPreview.height); }
                     }
+                    else if (E_UID_CURSOR_COMBAT == cursor["cursor_id"])
+                    {
+                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(CombatCursor.second.customPreview.bits); }
+                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(CombatCursor.second.customPreview.width); }
+                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(CombatCursor.second.customPreview.height); }
+                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(CombatCursor.second.defaultPreview.bits); }
+                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(CombatCursor.second.defaultPreview.width); }
+                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(CombatCursor.second.defaultPreview.height); }
+                    }
+                }
+            }
+
+            if (!object["hidden_cursors"].is_null())
+            {
+                for (auto &cursor : object["hidden_cursors"])
+                {
+                    Hash key = 0;
+                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
+                    if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(HiddenCursors[key].bits); }
+                    if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(HiddenCursors[key].width); }
+                    if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(HiddenCursors[key].height); }
                 }
             }
         }
@@ -233,12 +263,26 @@ namespace Settings
         return object;
     }
 
+    json SerialisePreview(HiddenCursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["default_bits"] = cursor.second.bits;
+        object["default_width"] = cursor.second.width;
+        object["default_height"] = cursor.second.height;
+        return object;
+    }
+
     void QueuePreviews()
     {
         for (auto& cursor : Cursors)
         {
             aQueueTexture.push(&cursor.second.customPreview);
             aQueueTexture.push(&cursor.second.defaultPreview);
+        }
+        for (auto& cursor : HiddenCursors)
+        {
+            aQueueTexture.push(&cursor.second);
         }
     }
 

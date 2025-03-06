@@ -17,10 +17,22 @@ typedef enum {
 } E_FILE_FORMAT;
 
 typedef enum {
-    E_CURSOR_RESERVED = 0,
-    E_CURSOR_COMBAT = 1,
-    E_CURSOR_NEXUS = 2
-} E_CURSOR_GW2;
+    /* settings tabs */
+    E_UID_SETTINGS_GENERAL = 0,
+    E_UID_SETTINGS_HIDDEN = 1,
+    E_UID_RESERVED_2 = 2,
+    E_UID_RESERVED_3 = 3,
+    E_UID_RESERVED_4 = 4,
+    E_UID_RESERVED_5 = 5,
+    E_UID_RESERVED_6 = 6,
+    E_UID_RESERVED_7 = 7,
+    E_UID_RESERVED_8 = 8,
+    E_UID_RESERVED_9 = 9,
+
+    /* special cursors */
+    E_UID_CURSOR_NEXUS = 10,
+    E_UID_CURSOR_COMBAT = 11
+} E_UNIQUE_IDENTIFIER;
 
 typedef uint32_t Hash;
 
@@ -45,5 +57,7 @@ struct CursorProperties {
 
 typedef std::map<Hash, CursorProperties> CursorMap;
 typedef std::pair<const Hash, CursorProperties> CursorPair;
+typedef std::map<Hash, CursorPreview> HiddenCursorMap;
+typedef std::pair<const Hash, CursorPreview> HiddenCursorPair;
 
 #endif /* SHARED_TYPES_H */

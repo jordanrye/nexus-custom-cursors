@@ -60,6 +60,10 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
                 GetCursorPreview(hCursor, it->second);
             }
         }
+        else if (HiddenCursors.find(key) != HiddenCursors.end())
+        {
+            /* cursor is hidden */
+        }
         else
         {
             /* key does not exist */
@@ -260,6 +264,12 @@ void AddonQueueDelete()
         Cursors.erase(aQueueDelete.front());
         aQueueDelete.pop();
     }
+
+    while (aQueueUnhide.size() > 0)
+    {
+        HiddenCursors.erase(aQueueUnhide.front());
+        aQueueUnhide.pop();
+    }
 }
 
 void AddonRender()
@@ -313,9 +323,10 @@ void AddonRender()
 }
 
 static void ItemSelectableImage(Hash UID, ID3D11ShaderResourceView* icon, const ImVec2& iconSize, int& selected, const ImVec2& selectableSize);
-static void ItemSelectableText(const char* str, int& selected, const ImVec2& selectableSize, const ImVec2& textSize);
+static void ItemSelectableText(const char* str, const E_UNIQUE_IDENTIFIER uid, int& selected, const ImVec2& selectableSize, const ImVec2& textSize);
 static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inputWidth);
 static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth);
+static void ItemOptionsHiddenCursors(int& selected, const float32_t& inputWidth);
 static void ColumnIdentifier(const char* identifier);
 static void ColumnPreview(const float32_t& inputWidth, CursorPreview& preview);
 static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor);
@@ -323,7 +334,8 @@ static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnHotspotY(const float32_t& inputWidth, CursorPair& cursor);
-static void ColumnRemove(CursorPair& cursor);
+static void ColumnDelete(CursorPair& cursor);
+static void ColumnHide(CursorPair& cursor);
 
 void AddonOptions()
 {
@@ -333,12 +345,14 @@ void AddonOptions()
     {
         static const ImVec2 minPadding(10.f, 10.f);
         static const ImVec2 iconSize(32.f, 32.f);
-        static const char* text = "General";
-        static const ImVec2 textSize = ImGui::CalcTextSize(text);
-        static const ImVec2 _maxSize = ImGui::MaxSizeImVec2(iconSize, textSize);
+        static const char* generalText = "General";
+        static const char* hiddenText = "Hidden";
+        static const ImVec2 generalTextSize = ImGui::CalcTextSize(generalText);
+        static const ImVec2 hiddenTextSize = ImGui::CalcTextSize(hiddenText);
+        static const ImVec2 _maxSize = ImGui::MaxSizeImVec2(ImGui::MaxSizeImVec2(iconSize, generalTextSize), hiddenTextSize);
         static const ImVec2 selectableTextSize = {
             _maxSize.x + minPadding.x + ImGui::GetStyle().ScrollbarSize,
-            textSize.y + minPadding.y
+            generalTextSize.y + minPadding.y
         };
         static const ImVec2 selectableImageSize = {
             _maxSize.x + minPadding.x + ImGui::GetStyle().ScrollbarSize,
@@ -348,7 +362,8 @@ void AddonOptions()
 
         if (ImGui::BeginChild("##Navigation", ImVec2(_maxSelectableSize.x, 0.f), true, ImGuiWindowFlags_NoResize))
         {
-            ItemSelectableText(text, selected, selectableTextSize, textSize);
+            ItemSelectableText(generalText, E_UID_SETTINGS_GENERAL, selected, selectableTextSize, generalTextSize);
+            ItemSelectableText(hiddenText, E_UID_SETTINGS_HIDDEN, selected, selectableTextSize, hiddenTextSize);
 
             if ((nullptr != NexusIcon) && (nullptr != NexusIcon->Resource))
             {
@@ -377,6 +392,7 @@ void AddonOptions()
         if (ImGui::BeginChild("##Content", ImVec2(-FLT_MIN, 0.0f), true, ImGuiWindowFlags_AlwaysAutoResize))
         {
             ItemOptionsGeneral(selected, inputWidth);
+            ItemOptionsHiddenCursors(selected, inputWidth);
             ItemOptions(NexusCursor, selected, inputWidth);
             ItemOptions(CombatCursor, selected, inputWidth);
 
@@ -412,19 +428,20 @@ static void ItemSelectableImage(Hash UID, ID3D11ShaderResourceView* icon, const 
     ImGui::SetCursorPos(ImVec2(pos.x, (pos.y + selectableSize.y + ImGui::GetStyle().ItemSpacing.y)));
 }
 
-static void ItemSelectableText(const char* str, int& selected, const ImVec2& selectableSize, const ImVec2& textSize)
+static void ItemSelectableText(const char* str, const E_UNIQUE_IDENTIFIER uid, int& selected, const ImVec2& selectableSize, const ImVec2& textSize)
 {
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 padding = {
         (selectableSize.x - textSize.x - ImGui::GetStyle().ScrollbarSize) / 2,
         (selectableSize.y - textSize.y) / 2
     };
+    const int identifier = static_cast<int>(uid);
 
     /* render selectable area */
     ImGui::SetCursorPos(pos);
-    if (ImGui::Selectable(("##" + std::string(str)).c_str(), (selected == 0), ImGuiSelectableFlags_None, selectableSize))
+    if (ImGui::Selectable(("##" + std::string(str)).c_str(), (selected == identifier), ImGuiSelectableFlags_None, selectableSize))
     {
-        selected = 0;
+        selected = identifier;
     }
 
     /* render text */
@@ -456,7 +473,9 @@ static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inpu
             }
         }
         
-        ColumnRemove(cursor);
+        ColumnDelete(cursor);
+        ImGui::SameLine();
+        ColumnHide(cursor);
     }
 }
 
@@ -467,7 +486,7 @@ static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
     static bool _flag3 = false;
     static bool _flag4 = false;
 
-    if (selected == 0)
+    if (selected == E_UID_SETTINGS_GENERAL)
     {
         ImGui::BeginGroupPanel("Special Cursors", ImVec2(inputWidth, 0.f));
         if (ImGui::Checkbox("Add 'in-combat' cursor override", &_flag1))
@@ -491,6 +510,57 @@ static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
         if (ImGui::Checkbox("Enable debug window", &_flag4))
         {
             /* do something */
+        }
+        ImGui::EndGroupPanel();
+    }
+}
+
+static void ItemOptionsHiddenCursors(int& selected, const float32_t& inputWidth)
+{
+    static const ImVec2 iconSize = ImVec2(24.f, 24.f);
+    static const ImVec2 textSize = ImGui::CalcTextSize("WWWWWWWWWW");
+    static const ImVec2 textPadding = { 0, ((iconSize.y - textSize.y) / 2) };
+    static const ImVec2 bttnPadding = { ((iconSize.x - ImGui::CalcTextSize("x").x) / 2), ((iconSize.y - ImGui::CalcTextSize("x").y) / 2) };
+
+    if (selected == E_UID_SETTINGS_HIDDEN)
+    {
+        ImGui::BeginGroupPanel("Hidden Cursors", ImVec2(inputWidth, 0.f));
+
+        ImGui::BeginTable("Cursors", 3);
+        {
+            for (auto& cursor : HiddenCursors)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableNextColumn();
+                if (cursor.second.resource != nullptr)
+                {
+                    ImGui::Image(cursor.second.resource, iconSize);
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::PushItemWidth(textSize.x);
+                ImGui::TextPadded(std::to_string(cursor.first).c_str(), textPadding);
+                ImGui::PopItemWidth();
+
+                ImGui::TableNextColumn();
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, bttnPadding); //ImVec2(4.f, 2.f));
+                if (ImGui::Button(("Unhide##Unhide" + std::to_string(cursor.first)).c_str()))
+                {
+                    /* copy cursor into cursor map */
+                    Cursors.insert(CursorPair(cursor.first, CursorProperties()));
+                    Cursors[cursor.first].defaultPreview = cursor.second;
+
+                    /* remove cursor from hidden cursor map */
+                    aQueueUnhide.push(cursor.first);
+                    cursor.second = CursorPreview();
+
+                    Settings::Save();
+                }
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::EndTable();
         }
         ImGui::EndGroupPanel();
     }
@@ -640,12 +710,29 @@ static void ColumnHotspotY(const float32_t& inputWidth, CursorPair& cursor)
     ImGui::PopItemWidth();
 }
 
-static void ColumnRemove(CursorPair& cursor)
+static void ColumnDelete(CursorPair& cursor)
 {
     if (ImGui::Button(("Delete##" + std::to_string(cursor.first)).c_str()))
     {
+        /* delete cursor */
         cursor.second = CursorProperties();
         aQueueDelete.push(cursor.first);
+
+        Settings::Save();
+    }
+}
+
+static void ColumnHide(CursorPair& cursor)
+{
+    if (ImGui::Button(("Hide##" + std::to_string(cursor.first)).c_str()))
+    {
+        /* hide cursor */
+        HiddenCursors.insert(HiddenCursorPair(cursor.first, cursor.second.defaultPreview));
+
+        /* delete cursor */
+        cursor.second = CursorProperties();
+        aQueueDelete.push(cursor.first);
+
         Settings::Save();
     }
 }

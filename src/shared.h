@@ -30,8 +30,10 @@ extern NexusLinkData* NexusLink;
 extern HCURSOR hCustomCursor;
 extern std::queue<CursorPreview*> aQueueTexture;
 extern std::queue<Hash> aQueueDelete;
+extern std::queue<Hash> aQueueUnhide;
 
 extern CursorMap Cursors;
+extern HiddenCursorMap HiddenCursors;
 extern CursorPair CombatCursor;
 extern CursorPair NexusCursor;
 
