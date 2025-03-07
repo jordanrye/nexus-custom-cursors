@@ -21,6 +21,7 @@ Mumble::Identity* MumbleIdentity = nullptr;
 NexusLinkData* NexusLink = nullptr;
 
 HCURSOR hCustomCursor = nullptr;
+
 std::queue<CursorPreview*> aQueueTexture;
 std::queue<Hash> aQueueDelete;
 std::queue<Hash> aQueueUnhide;

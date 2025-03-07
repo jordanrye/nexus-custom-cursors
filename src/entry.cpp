@@ -38,11 +38,11 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
 {
     uint32_t key = GetCursorHash(hCursor);
 
-    if (MumbleLink->Context.IsInCombat && CombatCursor.second.customCursor)
+    if (Settings::isEnabledNexusCursor && MumbleLink->Context.IsInCombat && CombatCursor.second.customCursor)
     {
         hCustomCursor = CombatCursor.second.customCursor;
     }
-    else if (ImGui::GetIO().WantCaptureMouse && NexusCursor.second.customCursor)
+    else if (Settings::isEnabledNexusCursor && ImGui::GetIO().WantCaptureMouse && NexusCursor.second.customCursor)
     {
         hCustomCursor = NexusCursor.second.customCursor;
     }
@@ -330,6 +330,7 @@ static void ItemOptionsHiddenCursors(int& selected, const float32_t& inputWidth)
 static void ColumnIdentifier(const char* identifier);
 static void ColumnPreview(const float32_t& inputWidth, CursorPreview& preview);
 static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor);
+static void ColumnSize(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor);
 static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor);
@@ -365,12 +366,12 @@ void AddonOptions()
             ItemSelectableText(generalText, E_UID_SETTINGS_GENERAL, selected, selectableTextSize, generalTextSize);
             ItemSelectableText(hiddenText, E_UID_SETTINGS_HIDDEN, selected, selectableTextSize, hiddenTextSize);
 
-            if ((nullptr != NexusIcon) && (nullptr != NexusIcon->Resource))
+            if (Settings::isEnabledNexusCursor && (nullptr != NexusIcon) && (nullptr != NexusIcon->Resource))
             {
                 ItemSelectableImage(NexusCursor.first, (ID3D11ShaderResourceView*)(NexusIcon->Resource), iconSize, selected, selectableImageSize);
             }
             
-            if ((nullptr != CombatIcon) && (nullptr != CombatIcon->Resource))
+            if (Settings::isEnabledCombatCursor && (nullptr != CombatIcon) && (nullptr != CombatIcon->Resource))
             {
                 ItemSelectableImage(CombatCursor.first, (ID3D11ShaderResourceView*)(CombatIcon->Resource), iconSize, selected, selectableImageSize);
             }
@@ -463,8 +464,15 @@ static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inpu
 
         if (cursor.second.customFilePath != "")
         {
-            ColumnWidth(inputWidth, cursor);
-            ColumnHeight(inputWidth, cursor);
+            if (Settings::isLinkedWidthHeight)
+            {
+                ColumnSize(inputWidth, cursor);
+            }
+            else
+            {
+                ColumnWidth(inputWidth, cursor);
+                ColumnHeight(inputWidth, cursor);
+            }
 
             if (cursor.second.customFileFormat == E_FILE_FORMAT_PNG)
             {
@@ -481,35 +489,24 @@ static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inpu
 
 static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
 {
-    static bool _flag1 = false;
-    static bool _flag2 = false;
-    static bool _flag3 = false;
-    static bool _flag4 = false;
-
     if (selected == E_UID_SETTINGS_GENERAL)
     {
         ImGui::BeginGroupPanel("Special Cursors", ImVec2(inputWidth, 0.f));
-        if (ImGui::Checkbox("Add 'in-combat' cursor override", &_flag1))
         {
-            /* do something */
-        }
-        if (ImGui::Checkbox("Add 'Nexus' cursor override", &_flag2))
-        {
-            /* do something */
+            if (ImGui::Checkbox("Enable 'Nexus' cursor override", &Settings::isEnabledNexusCursor)) { Settings::Save(); }
+            if (ImGui::Checkbox("Enable 'in-combat' cursor override", &Settings::isEnabledCombatCursor)) { Settings::Save(); }
         }
         ImGui::EndGroupPanel();
 
         ImGui::BeginGroupPanel("Configuration", ImVec2(inputWidth, 0.f));
-        if (ImGui::Checkbox("Separate width and height inputs", &_flag3))
         {
-            /* do something */
+            if (ImGui::Checkbox("Link width and height inputs", &Settings::isLinkedWidthHeight)) { Settings::Save(); }
         }
         ImGui::EndGroupPanel();
         
         ImGui::BeginGroupPanel("Debugging", ImVec2(inputWidth, 0.f));
-        if (ImGui::Checkbox("Enable debug window", &_flag4))
         {
-            /* do something */
+            if (ImGui::Checkbox("Toggle debug window", &Settings::isToggledDebug)) { Settings::Save(); }
         }
         ImGui::EndGroupPanel();
     }
@@ -626,7 +623,7 @@ static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor)
     ImGui::TextPadded("Filepath", ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
 }
 
-static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
+static void ColumnSize(const float32_t& inputWidth, CursorPair& cursor)
 {
     const auto originalWidth = static_cast<float32_t>(cursor.second.customWidth);
     const auto originalHeight = static_cast<float32_t>(cursor.second.customHeight);
@@ -651,33 +648,36 @@ static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
         Settings::Save();
     }
     ImGui::PopItemWidth();
+}
 
-    // ImGui::PushItemWidth(inputWidth);
-    // if (ImGui::InputInt(("Width##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
-    // {
-    //     if (cursor.second.customWidth < 1)
-    //     {
-    //         cursor.second.customWidth = 1;
-    //     }
-    //     LoadCustomCursor(cursor.second);
-    //     Settings::Save();
-    // }
-    // ImGui::PopItemWidth();
+static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
+{
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("Width##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customWidth), 8U, 8U))
+    {
+        if (cursor.second.customWidth < 1)
+        {
+            cursor.second.customWidth = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
 }
 
 static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor)
 {
-    // ImGui::PushItemWidth(inputWidth);
-    // if (ImGui::InputInt(("Height##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
-    // {
-    //     if (cursor.second.customHeight < 1)
-    //     {
-    //         cursor.second.customHeight = 1;
-    //     }
-    //     LoadCustomCursor(cursor.second);
-    //     Settings::Save();
-    // }
-    // ImGui::PopItemWidth();
+    ImGui::PushItemWidth(inputWidth);
+    if (ImGui::InputInt(("Height##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHeight), 8U, 8U))
+    {
+        if (cursor.second.customHeight < 1)
+        {
+            cursor.second.customHeight = 1;
+        }
+        LoadCustomCursor(cursor.second);
+        Settings::Save();
+    }
+    ImGui::PopItemWidth();
 }
 
 static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor)

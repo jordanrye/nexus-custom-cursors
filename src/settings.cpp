@@ -8,6 +8,17 @@
 
 namespace Settings
 {
+    /* state flags */
+    bool isEnabledNexusCursor = false;
+    bool isEnabledCombatCursor = false;
+    bool isLinkedWidthHeight = true;
+    bool isToggledDebug = false;
+    
+    const char* ENABLE_NEXUS_CURSOR = "enable_nexus_cursor";
+    const char* ENABLE_COMBAT_CURSOR = "enable_combat_cursor";
+    const char* LINK_WIDTH_HEIGHT_INPUTS = "link_width_height_inputs";
+    const char* TOGGLE_DEBUG_WINDOW = "toggle_debug_window";
+    
     std::mutex Mutex;
     std::filesystem::path SettingsPath;
     std::filesystem::path PreviewsPath;
@@ -73,6 +84,9 @@ namespace Settings
 
     void Save()
     {
+        /* general settings */
+        Settings["general"] = json::object();
+
         /* cursors */
         Settings["cursors"] = json::array();
         Previews["cursors"] = json::array();
@@ -85,6 +99,13 @@ namespace Settings
         Settings["hidden_cursors"] = json::array();
         Previews["hidden_cursors"] = json::array();
 
+        {
+            auto& general = Settings["general"];
+            general[ENABLE_NEXUS_CURSOR] = isEnabledNexusCursor;
+            general[ENABLE_COMBAT_CURSOR] = isEnabledCombatCursor;
+            general[LINK_WIDTH_HEIGHT_INPUTS] = isLinkedWidthHeight;
+            general[TOGGLE_DEBUG_WINDOW] = isToggledDebug;
+        }
         for (auto& cursor : Cursors)
         {
             Settings["cursors"].push_back(SerialiseSetting(cursor));
@@ -119,9 +140,26 @@ namespace Settings
     {
         if (!object.is_null())
         {
+            if (!object["general"].is_null())
+            {
+                auto& general = object["general"];
+                if (!general[ENABLE_NEXUS_CURSOR].is_null()) { general[ENABLE_NEXUS_CURSOR].get_to(isEnabledNexusCursor); }
+                if (!general[ENABLE_COMBAT_CURSOR].is_null()) { general[ENABLE_COMBAT_CURSOR].get_to(isEnabledCombatCursor); }
+                if (!general[LINK_WIDTH_HEIGHT_INPUTS].is_null()) { general[LINK_WIDTH_HEIGHT_INPUTS].get_to(isLinkedWidthHeight); }
+                if (!general[TOGGLE_DEBUG_WINDOW].is_null()) { general[TOGGLE_DEBUG_WINDOW].get_to(isToggledDebug); }
+            }
+            else
+            {
+                auto& general = object["general"];
+                general[ENABLE_NEXUS_CURSOR] = isEnabledNexusCursor;
+                general[ENABLE_COMBAT_CURSOR] = isEnabledCombatCursor;
+                general[LINK_WIDTH_HEIGHT_INPUTS] = isLinkedWidthHeight;
+                general[TOGGLE_DEBUG_WINDOW] = isToggledDebug;
+            }
+
             if (!object["cursors"].is_null())
             {
-                for (auto &cursor : object["cursors"])
+                for (auto& cursor : object["cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
@@ -136,7 +174,7 @@ namespace Settings
 
             if (!object["special_cursors"].is_null())
             {
-                for (auto &cursor : object["special_cursors"])
+                for (auto& cursor : object["special_cursors"])
                 {
                     if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
@@ -161,7 +199,7 @@ namespace Settings
 
             if (!object["hidden_cursors"].is_null())
             {
-                for (auto &hash : object["hidden_cursors"])
+                for (auto& hash : object["hidden_cursors"])
                 {
                     HiddenCursors.insert(HiddenCursorPair(hash, CursorPreview()));
                 }
@@ -175,7 +213,7 @@ namespace Settings
         {
             if (!object["cursors"].is_null())
             {
-                for (auto &cursor : object["cursors"])
+                for (auto& cursor : object["cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
@@ -190,7 +228,7 @@ namespace Settings
 
             if (!object["special_cursors"].is_null())
             {
-                for (auto &cursor : object["special_cursors"])
+                for (auto& cursor : object["special_cursors"])
                 {
                     if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
@@ -215,7 +253,7 @@ namespace Settings
 
             if (!object["hidden_cursors"].is_null())
             {
-                for (auto &cursor : object["hidden_cursors"])
+                for (auto& cursor : object["hidden_cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
