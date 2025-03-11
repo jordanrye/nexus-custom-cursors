@@ -146,12 +146,12 @@ extern "C" __declspec(dllexport) AddonDefinition* GetAddonDef()
     AddonDef.Version.Build = V_BUILD;
     AddonDef.Version.Revision = V_REVISION;
     AddonDef.Author = "Jordan";
-    AddonDef.Description = "Replace in-game cursors with custom icons.";
+    AddonDef.Description = "Customise in-game cursors.";
     AddonDef.Load = AddonLoad;
     AddonDef.Unload = AddonUnload;
     AddonDef.Flags = EAddonFlags_IsVolatile;
     AddonDef.Provider = EUpdateProvider_GitHub;
-    AddonDef.UpdateLink = "https://github.com/jordanrye/nexus-custom-cursors-public";
+    AddonDef.UpdateLink = "https://github.com/jordanrye/nexus-custom-cursors";
 
     return &AddonDef;
 }
