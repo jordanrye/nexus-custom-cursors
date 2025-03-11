@@ -9,7 +9,7 @@
 static bool IsFileType(const std::string& str, const std::string& ext);
 static std::string GetFilePath(std::string path);
 
-void LoadCustomCursor(CursorProperties& cursor)
+void LoadCustomCursor(CursorProperties& cursor, const bool isDrawHotspot)
 {
     std::string filepath = GetFilePath(cursor.customFilePath);
 
@@ -46,7 +46,7 @@ void LoadCustomCursor(CursorProperties& cursor)
         /* create preview */
         if (cursor.customCursor != nullptr)
         {
-            if (GetBitsFromCursor(cursor.customCursor, cursor.customPreview.width, cursor.customPreview.height, cursor.customPreview.bits))
+            if (GetBitsFromCursor(cursor.customCursor, cursor.customPreview.width, cursor.customPreview.height, cursor.customPreview.bits, isDrawHotspot))
             {
                 aQueueTexture.push(&cursor.customPreview);
             }

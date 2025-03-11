@@ -26,7 +26,7 @@ void AddonOptions();
 static bool isSetProcessPointers = false;
 
 static void GetProcessPointers();
-static void GetCursorPreview(HCURSOR hCursor, CursorProperties& properties);
+static void GetDefaultCursorPreview(HCURSOR hCursor, CursorProperties& properties);
 
 /*******************************************************************************
  * HOOK :: SetCursor
@@ -57,7 +57,7 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
             if (it->second.defaultPreview.bits.empty() || !it->second.defaultPreview.resource)
             {
                 /* get preview for default cursor */
-                GetCursorPreview(hCursor, it->second);
+                GetDefaultCursorPreview(hCursor, it->second);
             }
         }
         else if (HiddenCursors.find(key) != HiddenCursors.end())
@@ -68,7 +68,7 @@ HCURSOR WINAPI DetourSetCursor(HCURSOR hCursor)
         {
             /* key does not exist */
             Cursors.insert(CursorPair(key, CursorProperties()));
-            GetCursorPreview(hCursor, Cursors[key]);
+            GetDefaultCursorPreview(hCursor, Cursors[key]);
         }
     }
     else
@@ -194,8 +194,11 @@ void AddonLoad(AddonAPI* aApi)
     std::filesystem::create_directory(CacheDir);
     std::filesystem::create_directory(IconsDir);
 
-    Settings::LoadSettings(APIDefs->Paths.GetAddonDirectory("CustomCursors/settings.json"));
-    Settings::LoadPreviews(APIDefs->Paths.GetAddonDirectory("CustomCursors/appcache/previews.json"));
+    auto settingsFile = APIDefs->Paths.GetAddonDirectory("CustomCursors/settings.json");
+    auto previewsFile = APIDefs->Paths.GetAddonDirectory("CustomCursors/appcache/previews.json");
+    
+    /* load configuration */
+    Settings::Load(settingsFile, previewsFile);
 }
 
 void AddonUnload()
@@ -480,6 +483,17 @@ static void ItemOptions(CursorPair& cursor, int& selected, const float32_t& inpu
                 ColumnHotspotY(inputWidth, cursor);
             }
         }
+
+        if (ImGui::Checkbox("Enable hotspot preview", &Settings::isEnabledHotspotPreview)) 
+        {
+            for (auto& cursor : Cursors)
+            {
+                LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
+            }
+            LoadCustomCursor(CombatCursor.second, Settings::isEnabledHotspotPreview);
+            LoadCustomCursor(NexusCursor.second, Settings::isEnabledHotspotPreview);
+            Settings::Save(); 
+        }
         
         ColumnDelete(cursor);
         ImGui::SameLine();
@@ -501,6 +515,16 @@ static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
         ImGui::BeginGroupPanel("Configuration", ImVec2(inputWidth, 0.f));
         {
             if (ImGui::Checkbox("Link width and height inputs", &Settings::isLinkedWidthHeight)) { Settings::Save(); }
+            if (ImGui::Checkbox("Enable hotspot preview", &Settings::isEnabledHotspotPreview)) 
+            {
+                for (auto& cursor : Cursors)
+                {
+                    LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
+                }    
+                LoadCustomCursor(CombatCursor.second, Settings::isEnabledHotspotPreview);
+                LoadCustomCursor(NexusCursor.second, Settings::isEnabledHotspotPreview);
+                Settings::Save(); 
+            }
         }
         ImGui::EndGroupPanel();
         
@@ -514,7 +538,7 @@ static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
 
 static void ItemOptionsHiddenCursors(int& selected, const float32_t& inputWidth)
 {
-    static const ImVec2 iconSize = ImVec2(24.f, 24.f);
+    static const ImVec2 iconSize = ImVec2(18.f, 18.f);
     static const ImVec2 textSize = ImGui::CalcTextSize("WWWWWWWWWW");
     static const ImVec2 textPadding = { 0, ((iconSize.y - textSize.y) / 2) };
     static const ImVec2 bttnPadding = { ((iconSize.x - ImGui::CalcTextSize("x").x) / 2), ((iconSize.y - ImGui::CalcTextSize("x").y) / 2) };
@@ -612,7 +636,7 @@ static void ColumnFilepath(const float32_t& inputWidth, CursorPair& cursor)
                 cursor.second = CursorProperties();
                 cursor.second.defaultPreview = defaultPreview;
                 cursor.second.customFilePath = string_utils::replace_substr(std::string(ofn.lpstrFile), (GameDir.string() + "\\"), "");
-                LoadCustomCursor(cursor.second);
+                LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
                 Settings::Save();
             }
         }).detach();
@@ -644,7 +668,7 @@ static void ColumnSize(const float32_t& inputWidth, CursorPair& cursor)
             cursor.second.customHeight = 1;
         } 
 
-        LoadCustomCursor(cursor.second);
+        LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
         Settings::Save();
     }
     ImGui::PopItemWidth();
@@ -659,7 +683,7 @@ static void ColumnWidth(const float32_t& inputWidth, CursorPair& cursor)
         {
             cursor.second.customWidth = 1;
         }
-        LoadCustomCursor(cursor.second);
+        LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
         Settings::Save();
     }
     ImGui::PopItemWidth();
@@ -674,7 +698,7 @@ static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor)
         {
             cursor.second.customHeight = 1;
         }
-        LoadCustomCursor(cursor.second);
+        LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
         Settings::Save();
     }
     ImGui::PopItemWidth();
@@ -683,13 +707,13 @@ static void ColumnHeight(const float32_t& inputWidth, CursorPair& cursor)
 static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor)
 {
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("Hotspot X##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 4U, 4U))
+    if (ImGui::InputInt(("Hotspot X##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotX), 1U, 1U))
     {
         if (cursor.second.customHotspotX < 1)
         {
             cursor.second.customHotspotX = 1;
         }
-        LoadCustomCursor(cursor.second);
+        LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
         Settings::Save();
     }
     ImGui::PopItemWidth();
@@ -698,13 +722,13 @@ static void ColumnHotspotX(const float32_t& inputWidth, CursorPair& cursor)
 static void ColumnHotspotY(const float32_t& inputWidth, CursorPair& cursor)
 {
     ImGui::PushItemWidth(inputWidth);
-    if (ImGui::InputInt(("Hotspot Y##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 4U, 4U))
+    if (ImGui::InputInt(("Hotspot Y##" + std::to_string(cursor.first)).c_str(), &(cursor.second.customHotspotY), 1U, 1U))
     {
         if (cursor.second.customHotspotY < 1)
         {
             cursor.second.customHotspotY = 1;
         }
-        LoadCustomCursor(cursor.second);
+        LoadCustomCursor(cursor.second, Settings::isEnabledHotspotPreview);
         Settings::Save();
     }
     ImGui::PopItemWidth();
@@ -763,9 +787,9 @@ static void GetProcessPointers()
     } while (!isSetProcessPointers);
 }
 
-static void GetCursorPreview(HCURSOR hCursor, CursorProperties& properties)
+static void GetDefaultCursorPreview(HCURSOR hCursor, CursorProperties& properties)
 {
-    if (GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits));
+    if (GetBitsFromCursor(hCursor, properties.defaultPreview.width, properties.defaultPreview.height, properties.defaultPreview.bits, false));
     {
         aQueueTexture.push(&properties.defaultPreview);
     }

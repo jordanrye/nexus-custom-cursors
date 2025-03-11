@@ -11,14 +11,14 @@ using json = nlohmann::json;
 
 namespace Settings
 {
-    void LoadSettings(const std::filesystem::path& aPath);
-    void LoadPreviews(const std::filesystem::path& aPath);
+    void Load(const std::filesystem::path& aSettingsPath, const std::filesystem::path& aPreviewsPath);
     void Save();
     
     /* state flags */
     extern bool isEnabledNexusCursor;
     extern bool isEnabledCombatCursor;
     extern bool isLinkedWidthHeight;
+    extern bool isEnabledHotspotPreview;
     extern bool isToggledDebug;
 } // namespace Settings
 

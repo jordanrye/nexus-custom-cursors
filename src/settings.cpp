@@ -8,15 +8,16 @@
 
 namespace Settings
 {
-    /* state flags */
     bool isEnabledNexusCursor = false;
     bool isEnabledCombatCursor = false;
     bool isLinkedWidthHeight = true;
+    bool isEnabledHotspotPreview = false;
     bool isToggledDebug = false;
     
     const char* ENABLE_NEXUS_CURSOR = "enable_nexus_cursor";
     const char* ENABLE_COMBAT_CURSOR = "enable_combat_cursor";
     const char* LINK_WIDTH_HEIGHT_INPUTS = "link_width_height_inputs";
+    const char* ENABLE_HOTSPOT_PREVIEW = "enable_hotspot_preview";
     const char* TOGGLE_DEBUG_WINDOW = "toggle_debug_window";
     
     std::mutex Mutex;
@@ -25,102 +26,86 @@ namespace Settings
     json Settings = json::object();
     json Previews = json::object();
 
-    void DeserialiseSettings(json object);
-    void DeserialisePreviews(json object);
-    void LoadCustomCursors();
+    bool ParseSettings();
+    bool ParsePreviews();
+    bool DeserialiseSettings();
+    bool DeserialisePreviews();
 
-    json SerialiseSetting(CursorPair cursor);
-    json SerialisePreview(CursorPair cursor);
-    json SerialisePreview(HiddenCursorPair cursor);
+    void LoadCursors();
     void QueuePreviews();
 
-    void LoadSettings(const std::filesystem::path& aPath)
-    {
-        SettingsPath = aPath;
 
-        Mutex.lock();
+    json SerialiseCursorProperties(CursorPair cursor);
+    json SerialiseCursorPreview(CursorPair cursor);
+    json SerialiseCursorPreview(HiddenCursorPair cursor);
+
+    void Load(const std::filesystem::path& aSettingsPath, const std::filesystem::path& aPreviewsPath)
+    {
+        SettingsPath = aSettingsPath;
+        PreviewsPath = aPreviewsPath;
+
+        /* load settings */
+        if (ParseSettings())
         {
-            try
+            if (DeserialiseSettings())
             {
-                std::ifstream file(SettingsPath);
-                Settings = json::parse(file);
-                file.close();
-            }
-            catch (json::parse_error& ex)
-            {
-                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "settings.json could not be parsed.");
-                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+                LoadCursors();
             }
         }
-        Mutex.unlock();
 
-        DeserialiseSettings(Settings);
-        LoadCustomCursors();
-    }
-
-    void LoadPreviews(const std::filesystem::path& aPath)
-    {
-        PreviewsPath = aPath;
-
-        Mutex.lock();
+        /* load previews */
+        if (ParsePreviews())
         {
-            try
+            if (DeserialisePreviews())
             {
-                std::ifstream file(PreviewsPath);
-                Previews = json::parse(file);
-                file.close();
-            }
-            catch (json::parse_error& ex)
-            {
-                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "previews.json could not be parsed.");
-                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+                QueuePreviews();
             }
         }
-        Mutex.unlock();
-
-        DeserialisePreviews(Previews);
-        QueuePreviews();
     }
 
     void Save()
     {
         /* general settings */
         Settings["general"] = json::object();
-
-        /* cursors */
-        Settings["cursors"] = json::array();
-        Previews["cursors"] = json::array();
-
-        /* special cursors */
-        Settings["special_cursors"] = json::array();
-        Previews["special_cursors"] = json::array();
-
-        /* hidden cursors */
-        Settings["hidden_cursors"] = json::array();
-        Previews["hidden_cursors"] = json::array();
-
         {
             auto& general = Settings["general"];
             general[ENABLE_NEXUS_CURSOR] = isEnabledNexusCursor;
             general[ENABLE_COMBAT_CURSOR] = isEnabledCombatCursor;
             general[LINK_WIDTH_HEIGHT_INPUTS] = isLinkedWidthHeight;
+            general[ENABLE_HOTSPOT_PREVIEW] = isEnabledHotspotPreview;
             general[TOGGLE_DEBUG_WINDOW] = isToggledDebug;
         }
+
+        /* cursors */
+        Settings["cursors"] = json::array();
+        Previews["cursors"] = json::array();
         for (auto& cursor : Cursors)
         {
-            Settings["cursors"].push_back(SerialiseSetting(cursor));
-            Previews["cursors"].push_back(SerialisePreview(cursor));
+            Settings["cursors"].push_back(SerialiseCursorProperties(cursor));
+            Previews["cursors"].push_back(SerialiseCursorPreview(cursor));
         }
-        Settings["special_cursors"].push_back(SerialiseSetting(CombatCursor));
-        Previews["special_cursors"].push_back(SerialisePreview(CombatCursor));
-        Settings["special_cursors"].push_back(SerialiseSetting(NexusCursor));
-        Previews["special_cursors"].push_back(SerialisePreview(NexusCursor));
+
+        /* special cursors */
+        Settings["special_cursors"] = json::array();
+        Previews["special_cursors"] = json::array();
+        {
+            Settings["special_cursors"].push_back(SerialiseCursorProperties(NexusCursor));
+            Previews["special_cursors"].push_back(SerialiseCursorPreview(NexusCursor));
+            
+            Settings["special_cursors"].push_back(SerialiseCursorProperties(CombatCursor));
+            Previews["special_cursors"].push_back(SerialiseCursorPreview(CombatCursor));
+        }
+
+        /* hidden cursors */
+        Settings["hidden_cursors"] = json::array();
+        Previews["hidden_cursors"] = json::array();
         for (auto& cursor : HiddenCursors)
         {
             Settings["hidden_cursors"].push_back(cursor.first);
-            Previews["hidden_cursors"].push_back(SerialisePreview(cursor));
+            Previews["hidden_cursors"].push_back(SerialiseCursorPreview(cursor));
         }
 
+        /* write updated configuration to disk */
         Mutex.lock();
         {
             /* save to settings.json */
@@ -136,30 +121,84 @@ namespace Settings
         Mutex.unlock();
     }
 
-    void DeserialiseSettings(json object)
+    bool ParseSettings()
     {
-        if (!object.is_null())
+        bool success = false;
+
+        /* attempt to parse settings.json */
+        Mutex.lock();
         {
-            if (!object["general"].is_null())
+            try
             {
-                auto& general = object["general"];
+                std::ifstream file(SettingsPath);
+                Settings = json::parse(file);
+                file.close();
+                success = true;
+            }
+            catch (json::parse_error& ex)
+            {
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "settings.json could not be parsed.");
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+            }
+        }
+        Mutex.unlock();
+
+        return success;
+    }
+
+    bool ParsePreviews()
+    {
+        bool success = false;
+
+        /* attempt to parse previews.json */
+        Mutex.lock();
+        {
+            try
+            {
+                std::ifstream file(PreviewsPath);
+                Previews = json::parse(file);
+                file.close();
+                success = true;
+            }
+            catch (json::parse_error& ex)
+            {
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", "previews.json could not be parsed.");
+                APIDefs->Log(ELogLevel_WARNING, "CustomCursors", ex.what());
+            }
+        }
+        Mutex.unlock();
+
+        return success;
+    }
+
+    bool DeserialiseSettings()
+    {
+        bool success = false;
+
+        if (!Settings.is_null())
+        {
+            if (!Settings["general"].is_null())
+            {
+                auto& general = Settings["general"];
                 if (!general[ENABLE_NEXUS_CURSOR].is_null()) { general[ENABLE_NEXUS_CURSOR].get_to(isEnabledNexusCursor); }
                 if (!general[ENABLE_COMBAT_CURSOR].is_null()) { general[ENABLE_COMBAT_CURSOR].get_to(isEnabledCombatCursor); }
                 if (!general[LINK_WIDTH_HEIGHT_INPUTS].is_null()) { general[LINK_WIDTH_HEIGHT_INPUTS].get_to(isLinkedWidthHeight); }
+                if (!general[ENABLE_HOTSPOT_PREVIEW].is_null()) { general[ENABLE_HOTSPOT_PREVIEW].get_to(isEnabledHotspotPreview); }
                 if (!general[TOGGLE_DEBUG_WINDOW].is_null()) { general[TOGGLE_DEBUG_WINDOW].get_to(isToggledDebug); }
             }
             else
             {
-                auto& general = object["general"];
+                auto& general = Settings["general"];
                 general[ENABLE_NEXUS_CURSOR] = isEnabledNexusCursor;
                 general[ENABLE_COMBAT_CURSOR] = isEnabledCombatCursor;
                 general[LINK_WIDTH_HEIGHT_INPUTS] = isLinkedWidthHeight;
+                general[ENABLE_HOTSPOT_PREVIEW] = isEnabledHotspotPreview;
                 general[TOGGLE_DEBUG_WINDOW] = isToggledDebug;
             }
 
-            if (!object["cursors"].is_null())
+            if (!Settings["cursors"].is_null())
             {
-                for (auto& cursor : object["cursors"])
+                for (auto& cursor : Settings["cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
@@ -172,9 +211,9 @@ namespace Settings
                 }
             }
 
-            if (!object["special_cursors"].is_null())
+            if (!Settings["special_cursors"].is_null())
             {
-                for (auto& cursor : object["special_cursors"])
+                for (auto& cursor : Settings["special_cursors"])
                 {
                     if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
@@ -197,23 +236,30 @@ namespace Settings
                 }
             }
 
-            if (!object["hidden_cursors"].is_null())
+            if (!Settings["hidden_cursors"].is_null())
             {
-                for (auto& hash : object["hidden_cursors"])
+                for (auto& hash : Settings["hidden_cursors"])
                 {
                     HiddenCursors.insert(HiddenCursorPair(hash, CursorPreview()));
                 }
             }
+
+            success = true;
         }
+
+        return success;
     }
 
-    void DeserialisePreviews(json object)
+    bool DeserialisePreviews()
     {
-        if (!object.is_null())
+        bool success = false;
+
+        /* attempt to deserialise previews */
+        if (!Previews.is_null())
         {
-            if (!object["cursors"].is_null())
+            if (!Previews["cursors"].is_null())
             {
-                for (auto& cursor : object["cursors"])
+                for (auto& cursor : Previews["cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
@@ -226,9 +272,9 @@ namespace Settings
                 }
             }
 
-            if (!object["special_cursors"].is_null())
+            if (!Previews["special_cursors"].is_null())
             {
-                for (auto& cursor : object["special_cursors"])
+                for (auto& cursor : Previews["special_cursors"])
                 {
                     if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
                     {
@@ -251,9 +297,9 @@ namespace Settings
                 }
             }
 
-            if (!object["hidden_cursors"].is_null())
+            if (!Previews["hidden_cursors"].is_null())
             {
-                for (auto& cursor : object["hidden_cursors"])
+                for (auto& cursor : Previews["hidden_cursors"])
                 {
                     Hash key = 0;
                     if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
@@ -262,53 +308,21 @@ namespace Settings
                     if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(HiddenCursors[key].height); }
                 }
             }
+
+            success = true;
         }
+
+        return success;
     }
 
-    void LoadCustomCursors()
+    void LoadCursors()
     {
         for (auto& cursor : Cursors)
         {
-            LoadCustomCursor(cursor.second);
+            LoadCustomCursor(cursor.second, isEnabledHotspotPreview);
         }
-        LoadCustomCursor(CombatCursor.second);
-        LoadCustomCursor(NexusCursor.second);
-    }
-
-    json SerialiseSetting(CursorPair cursor)
-    {
-        json object{};
-        object["cursor_id"] = cursor.first;
-        object["file_path"] = cursor.second.customFilePath;
-        object["file_format"] = cursor.second.customFileFormat;
-        object["width"] = cursor.second.customWidth;
-        object["height"] = cursor.second.customHeight;
-        object["hotspot_x"] = cursor.second.customHotspotX;
-        object["hotspot_y"] = cursor.second.customHotspotY;
-        return object;
-    }
-
-    json SerialisePreview(CursorPair cursor)
-    {
-        json object{};
-        object["cursor_id"] = cursor.first;
-        object["custom_bits"] = cursor.second.customPreview.bits;
-        object["custom_width"] = cursor.second.customPreview.width;
-        object["custom_height"] = cursor.second.customPreview.height;
-        object["default_bits"] = cursor.second.defaultPreview.bits;
-        object["default_width"] = cursor.second.defaultPreview.width;
-        object["default_height"] = cursor.second.defaultPreview.height;
-        return object;
-    }
-
-    json SerialisePreview(HiddenCursorPair cursor)
-    {
-        json object{};
-        object["cursor_id"] = cursor.first;
-        object["default_bits"] = cursor.second.bits;
-        object["default_width"] = cursor.second.width;
-        object["default_height"] = cursor.second.height;
-        return object;
+        LoadCustomCursor(CombatCursor.second, isEnabledHotspotPreview);
+        LoadCustomCursor(NexusCursor.second, isEnabledHotspotPreview);
     }
 
     void QueuePreviews()
@@ -322,6 +336,42 @@ namespace Settings
         {
             aQueueTexture.push(&cursor.second);
         }
+    }
+
+    json SerialiseCursorProperties(CursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["file_path"] = cursor.second.customFilePath;
+        object["file_format"] = cursor.second.customFileFormat;
+        object["width"] = cursor.second.customWidth;
+        object["height"] = cursor.second.customHeight;
+        object["hotspot_x"] = cursor.second.customHotspotX;
+        object["hotspot_y"] = cursor.second.customHotspotY;
+        return object;
+    }
+
+    json SerialiseCursorPreview(CursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["custom_bits"] = cursor.second.customPreview.bits;
+        object["custom_width"] = cursor.second.customPreview.width;
+        object["custom_height"] = cursor.second.customPreview.height;
+        object["default_bits"] = cursor.second.defaultPreview.bits;
+        object["default_width"] = cursor.second.defaultPreview.width;
+        object["default_height"] = cursor.second.defaultPreview.height;
+        return object;
+    }
+
+    json SerialiseCursorPreview(HiddenCursorPair cursor)
+    {
+        json object{};
+        object["cursor_id"] = cursor.first;
+        object["default_bits"] = cursor.second.bits;
+        object["default_width"] = cursor.second.width;
+        object["default_height"] = cursor.second.height;
+        return object;
     }
 
 } // namespace Settings

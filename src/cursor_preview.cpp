@@ -7,7 +7,9 @@
 #include <Windows.h>
 #include <d3d11.h>
 
-bool GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits)
+static void SetHotspotPreviewBits(const uint32_t& pWidth, const uint32_t& pHeight, const uint32_t& pHotspotX, const uint32_t& pHotspotY, std::vector<uint32_t>& pBits);
+
+bool GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std::vector<uint32_t>& pBits, const bool isDrawHotspot)
 {
     bool success = false;
     ICONINFO iconInfo{};
@@ -59,6 +61,12 @@ bool GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std
                 }
             }
 
+            /* set cursor hotspot bits */
+            if (isDrawHotspot)
+            {
+                SetHotspotPreviewBits(pWidth, pHeight, iconInfo.xHotspot, iconInfo.yHotspot, pBits);
+            }
+
             /* clean-up */
             delete[] bits;
             if (iconInfo.hbmMask != nullptr) { DeleteObject(iconInfo.hbmMask); }
@@ -71,6 +79,45 @@ bool GetBitsFromCursor(HCURSOR hCursor, uint32_t& pWidth, uint32_t& pHeight, std
     }
 
     return success;
+}
+
+static void SetHotspotPreviewBits(const uint32_t& pWidth, const uint32_t& pHeight, const uint32_t& pHotspotX, const uint32_t& pHotspotY, std::vector<uint32_t>& pBits)
+{
+    /* draw shadow for hotspot indicator */
+    for (uint32_t y = 0U; y < pHeight; y++)
+    {
+        for (uint32_t x = 0U; x < pWidth; x++)
+        {
+            if (x == (pHotspotX + 1))
+            {
+                auto pos = (y * pWidth) + x;
+                pBits.at(pos) = 0xFF000000;
+            }
+            if (y == (pHotspotY + 1))
+            {
+                auto pos = (y * pWidth) + x;
+                pBits.at(pos) = 0xFF000000;
+            }
+        }
+    }
+    
+    /* draw hotspot indicator */
+    for (uint32_t y = 0U; y < pHeight; y++)
+    {
+        for (uint32_t x = 0U; x < pWidth; x++)
+        {
+            if (x == pHotspotX)
+            {
+                auto pos = (y * pWidth) + x;
+                pBits.at(pos) = 0xFFFFFFFF;
+            }
+            if (y == pHotspotY)
+            {
+                auto pos = (y * pWidth) + x;
+                pBits.at(pos) = 0xFFFFFFFF;
+            }
+        }
+    }
 }
 
 void CreateResourceFromBits(const uint32_t& pWidth, const uint32_t& pHeight, const std::vector<uint32_t>& pBits, ID3D11ShaderResourceView** ppResource)
