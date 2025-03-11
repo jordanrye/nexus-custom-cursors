@@ -34,6 +34,8 @@ namespace Settings
     void LoadCursors();
     void QueuePreviews();
 
+    void DeserialiseCursorProperties(json object, CursorProperties &properties);
+    void DeserialiseCursorPreview(json object, CursorProperties& properties);
 
     json SerialiseCursorProperties(CursorPair cursor);
     json SerialiseCursorPreview(CursorPair cursor);
@@ -198,40 +200,28 @@ namespace Settings
 
             if (!Settings["cursors"].is_null())
             {
-                for (auto& cursor : Settings["cursors"])
+                for (auto& object : Settings["cursors"])
                 {
                     Hash key = 0;
-                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
-                    if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(Cursors[key].customFilePath); }
-                    if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(Cursors[key].customFileFormat); }
-                    if (!cursor["width"].is_null()) { cursor["width"].get_to(Cursors[key].customWidth); }
-                    if (!cursor["height"].is_null()) { cursor["height"].get_to(Cursors[key].customHeight); }
-                    if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(Cursors[key].customHotspotX); }
-                    if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(Cursors[key].customHotspotY); }
+                    if (!object["cursor_id"].is_null())
+                    { 
+                        object["cursor_id"].get_to(key);
+                        DeserialiseCursorProperties(object, Cursors[key]);
+                    }
                 }
             }
 
             if (!Settings["special_cursors"].is_null())
             {
-                for (auto& cursor : Settings["special_cursors"])
+                for (auto& object : Settings["special_cursors"])
                 {
-                    if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
+                    if (E_UID_CURSOR_NEXUS == object["cursor_id"])
                     {
-                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(NexusCursor.second.customFilePath); }
-                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(NexusCursor.second.customFileFormat); }
-                        if (!cursor["width"].is_null()) { cursor["width"].get_to(NexusCursor.second.customWidth); }
-                        if (!cursor["height"].is_null()) { cursor["height"].get_to(NexusCursor.second.customHeight); }
-                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(NexusCursor.second.customHotspotX); }
-                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(NexusCursor.second.customHotspotY); }
+                        DeserialiseCursorProperties(object, NexusCursor.second);
                     }
-                    else if (E_UID_CURSOR_COMBAT == cursor["cursor_id"])
+                    else if (E_UID_CURSOR_COMBAT == object["cursor_id"])
                     {
-                        if (!cursor["file_path"].is_null()) { cursor["file_path"].get_to(CombatCursor.second.customFilePath); }
-                        if (!cursor["file_format"].is_null()) { cursor["file_format"].get_to(CombatCursor.second.customFileFormat); }
-                        if (!cursor["width"].is_null()) { cursor["width"].get_to(CombatCursor.second.customWidth); }
-                        if (!cursor["height"].is_null()) { cursor["height"].get_to(CombatCursor.second.customHeight); }
-                        if (!cursor["hotspot_x"].is_null()) { cursor["hotspot_x"].get_to(CombatCursor.second.customHotspotX); }
-                        if (!cursor["hotspot_y"].is_null()) { cursor["hotspot_y"].get_to(CombatCursor.second.customHotspotY); }
+                        DeserialiseCursorProperties(object, CombatCursor.second);
                     }
                 }
             }
@@ -259,53 +249,41 @@ namespace Settings
         {
             if (!Previews["cursors"].is_null())
             {
-                for (auto& cursor : Previews["cursors"])
+                for (auto& object : Previews["cursors"])
                 {
                     Hash key = 0;
-                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
-                    if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(Cursors[key].customPreview.bits); }
-                    if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(Cursors[key].customPreview.width); }
-                    if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(Cursors[key].customPreview.height); }
-                    if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(Cursors[key].defaultPreview.bits); }
-                    if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(Cursors[key].defaultPreview.width); }
-                    if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(Cursors[key].defaultPreview.height); }
+                    if (!object["cursor_id"].is_null())
+                    { 
+                        object["cursor_id"].get_to(key); 
+                        DeserialiseCursorPreview(object, Cursors[key]);
+                    }
                 }
             }
 
             if (!Previews["special_cursors"].is_null())
             {
-                for (auto& cursor : Previews["special_cursors"])
+                for (auto& object : Previews["special_cursors"])
                 {
-                    if (E_UID_CURSOR_NEXUS == cursor["cursor_id"])
+                    if (E_UID_CURSOR_NEXUS == object["cursor_id"])
                     {
-                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(NexusCursor.second.customPreview.bits); }
-                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(NexusCursor.second.customPreview.width); }
-                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(NexusCursor.second.customPreview.height); }
-                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(NexusCursor.second.defaultPreview.bits); }
-                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(NexusCursor.second.defaultPreview.width); }
-                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(NexusCursor.second.defaultPreview.height); }
+                        DeserialiseCursorPreview(object, NexusCursor.second);
                     }
-                    else if (E_UID_CURSOR_COMBAT == cursor["cursor_id"])
+                    else if (E_UID_CURSOR_COMBAT == object["cursor_id"])
                     {
-                        if (!cursor["custom_bits"].is_null()) { cursor["custom_bits"].get_to(CombatCursor.second.customPreview.bits); }
-                        if (!cursor["custom_width"].is_null()) { cursor["custom_width"].get_to(CombatCursor.second.customPreview.width); }
-                        if (!cursor["custom_height"].is_null()) { cursor["custom_height"].get_to(CombatCursor.second.customPreview.height); }
-                        if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(CombatCursor.second.defaultPreview.bits); }
-                        if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(CombatCursor.second.defaultPreview.width); }
-                        if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(CombatCursor.second.defaultPreview.height); }
+                        DeserialiseCursorPreview(object, CombatCursor.second);
                     }
                 }
             }
 
             if (!Previews["hidden_cursors"].is_null())
             {
-                for (auto& cursor : Previews["hidden_cursors"])
+                for (auto& object : Previews["hidden_cursors"])
                 {
                     Hash key = 0;
-                    if (!cursor["cursor_id"].is_null()) { cursor["cursor_id"].get_to(key); }
-                    if (!cursor["default_bits"].is_null()) { cursor["default_bits"].get_to(HiddenCursors[key].bits); }
-                    if (!cursor["default_width"].is_null()) { cursor["default_width"].get_to(HiddenCursors[key].width); }
-                    if (!cursor["default_height"].is_null()) { cursor["default_height"].get_to(HiddenCursors[key].height); }
+                    if (!object["cursor_id"].is_null()) { object["cursor_id"].get_to(key); }
+                    if (!object["default_bits"].is_null()) { object["default_bits"].get_to(HiddenCursors[key].bits); }
+                    if (!object["default_width"].is_null()) { object["default_width"].get_to(HiddenCursors[key].width); }
+                    if (!object["default_height"].is_null()) { object["default_height"].get_to(HiddenCursors[key].height); }
                 }
             }
 
@@ -336,6 +314,26 @@ namespace Settings
         {
             aQueueTexture.push(&cursor.second);
         }
+    }
+
+    void DeserialiseCursorProperties(json object, CursorProperties &properties)
+    {
+        if (!object["file_path"].is_null()) { object["file_path"].get_to(properties.customFilePath); }
+        if (!object["file_format"].is_null()) { object["file_format"].get_to(properties.customFileFormat); }
+        if (!object["width"].is_null()) { object["width"].get_to(properties.customWidth); }
+        if (!object["height"].is_null()) { object["height"].get_to(properties.customHeight); }
+        if (!object["hotspot_x"].is_null()) { object["hotspot_x"].get_to(properties.customHotspotX); }
+        if (!object["hotspot_y"].is_null()) { object["hotspot_y"].get_to(properties.customHotspotY); }
+    }
+
+    void DeserialiseCursorPreview(json object, CursorProperties &properties)
+    {
+        if (!object["custom_bits"].is_null()) { object["custom_bits"].get_to(properties.customPreview.bits); }
+        if (!object["custom_width"].is_null()) { object["custom_width"].get_to(properties.customPreview.width); }
+        if (!object["custom_height"].is_null()) { object["custom_height"].get_to(properties.customPreview.height); }
+        if (!object["default_bits"].is_null()) { object["default_bits"].get_to(properties.defaultPreview.bits); }
+        if (!object["default_width"].is_null()) { object["default_width"].get_to(properties.defaultPreview.width); }
+        if (!object["default_height"].is_null()) { object["default_height"].get_to(properties.defaultPreview.height); }
     }
 
     json SerialiseCursorProperties(CursorPair cursor)

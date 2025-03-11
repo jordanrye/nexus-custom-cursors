@@ -367,7 +367,10 @@ void AddonOptions()
         if (ImGui::BeginChild("##Navigation", ImVec2(_maxSelectableSize.x, 0.f), true, ImGuiWindowFlags_NoResize))
         {
             ItemSelectableText(generalText, E_UID_SETTINGS_GENERAL, selected, selectableTextSize, generalTextSize);
-            ItemSelectableText(hiddenText, E_UID_SETTINGS_HIDDEN, selected, selectableTextSize, hiddenTextSize);
+            if (HiddenCursors.size() > 0)
+            {
+                ItemSelectableText(hiddenText, E_UID_SETTINGS_HIDDEN, selected, selectableTextSize, hiddenTextSize);
+            }
 
             if (Settings::isEnabledNexusCursor && (nullptr != NexusIcon) && (nullptr != NexusIcon->Resource))
             {
@@ -525,12 +528,6 @@ static void ItemOptionsGeneral(int& selected, const float32_t& inputWidth)
                 LoadCustomCursor(NexusCursor.second, Settings::isEnabledHotspotPreview);
                 Settings::Save(); 
             }
-        }
-        ImGui::EndGroupPanel();
-        
-        ImGui::BeginGroupPanel("Debugging", ImVec2(inputWidth, 0.f));
-        {
-            if (ImGui::Checkbox("Toggle debug window", &Settings::isToggledDebug)) { Settings::Save(); }
         }
         ImGui::EndGroupPanel();
     }
